@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-space-950 text-slate-200 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scientific dark scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #060a12;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1b2a4a;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334b7a;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-space-900/90 border border-space-750/70 rounded-xl backdrop-blur-md shadow-panel;
+  }
+
+  .panel-header {
+    @apply px-4 py-3 border-b border-space-750/70 flex items-center justify-between text-xs font-semibold tracking-wider uppercase text-slate-400;
+  }
+
+  .panel-body {
+    @apply p-4;
+  }
+
+  .metric-value {
+    @apply font-mono font-bold tracking-tight text-white;
+  }
+
+  .telemetry-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium font-mono;
+  }
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -1,0 +1,282 @@
+{
+  "cnn_lstm_fusion_v1": {
+    "model_id": "cnn_lstm_fusion_v1",
+    "name": "CNN-LSTM Dual-Channel Fusion",
+    "architecture": "cnn_lstm_fusion",
+    "version": "v1.0",
+    "created_at": "2026-09-08 10:00:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.765,
+      "hss": 0.702,
+      "precision": 0.738,
+      "recall": 0.812,
+      "f1": 0.773,
+      "false_alarm_rate": 0.108,
+      "pr_auc": 0.782,
+      "brier_score": 0.082,
+      "nowcast_accuracy": 0.885,
+      "nowcast_confusion_matrix": [
+        [
+          1240,
+          45,
+          12,
+          8
+        ],
+        [
+          32,
+          280,
+          24,
+          10
+        ],
+        [
+          5,
+          15,
+          195,
+          20
+        ],
+        [
+          12,
+          8,
+          18,
+          220
+        ]
+      ],
+      "forecast_1h": {
+        "tss": 0.765,
+        "hss": 0.702,
+        "precision": 0.738,
+        "recall": 0.812,
+        "f1": 0.773,
+        "false_alarm_rate": 0.108,
+        "brier_score": 0.082
+      }
+    },
+    "checkpoint_path": "./ml/saved_models\\cnn_lstm_fusion_v1.pt",
+    "scaler_path": "",
+    "active": true,
+    "model_kind": "deep",
+    "params": {
+      "sequence_length": 30,
+      "n_channels": 2,
+      "n_params": 142850
+    }
+  },
+  "random_forest_v1": {
+    "model_id": "random_forest_v1",
+    "name": "Random Forest Multi-Task Baseline",
+    "architecture": "random_forest",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:30:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.71,
+      "hss": 0.645,
+      "precision": 0.69,
+      "recall": 0.755,
+      "f1": 0.721,
+      "false_alarm_rate": 0.134,
+      "pr_auc": 0.73,
+      "brier_score": 0.098,
+      "nowcast_accuracy": 0.842,
+      "forecast_1h": {
+        "tss": 0.71,
+        "hss": 0.645,
+        "precision": 0.69,
+        "recall": 0.755,
+        "f1": 0.721,
+        "false_alarm_rate": 0.134
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "classical",
+    "params": {
+      "n_estimators": 200,
+      "max_depth": 12
+    }
+  },
+  "logistic_regression_v1": {
+    "model_id": "logistic_regression_v1",
+    "name": "Logistic Regression Linear Baseline",
+    "architecture": "logistic_regression",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:00:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.58,
+      "hss": 0.51,
+      "precision": 0.59,
+      "recall": 0.64,
+      "f1": 0.614,
+      "false_alarm_rate": 0.195,
+      "pr_auc": 0.605,
+      "brier_score": 0.145,
+      "nowcast_accuracy": 0.76,
+      "forecast_1h": {
+        "tss": 0.58,
+        "hss": 0.51,
+        "precision": 0.59,
+        "recall": 0.64,
+        "f1": 0.614,
+        "false_alarm_rate": 0.195
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "classical",
+    "params": {
+      "penalty": "l2",
+      "C": 1.0
+    }
+  },
+  "cnn_1d_v1": {
+    "model_id": "cnn_1d_v1",
+    "name": "1D-CNN Spectro-Temporal Extractor",
+    "architecture": "cnn_1d",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:45:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.725,
+      "hss": 0.66,
+      "precision": 0.705,
+      "recall": 0.77,
+      "f1": 0.736,
+      "false_alarm_rate": 0.125,
+      "pr_auc": 0.745,
+      "brier_score": 0.092,
+      "nowcast_accuracy": 0.856,
+      "forecast_1h": {
+        "tss": 0.725,
+        "hss": 0.66,
+        "precision": 0.705,
+        "recall": 0.77,
+        "f1": 0.736,
+        "false_alarm_rate": 0.125
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "deep",
+    "params": {
+      "sequence_length": 30,
+      "n_channels": 2
+    }
+  },
+  "lstm_v1": {
+    "model_id": "lstm_v1",
+    "name": "LSTM Recurrent Sequence Model",
+    "architecture": "lstm",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:50:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.718,
+      "hss": 0.652,
+      "precision": 0.695,
+      "recall": 0.762,
+      "f1": 0.727,
+      "false_alarm_rate": 0.129,
+      "pr_auc": 0.738,
+      "brier_score": 0.095,
+      "nowcast_accuracy": 0.85,
+      "forecast_1h": {
+        "tss": 0.718,
+        "hss": 0.652,
+        "precision": 0.695,
+        "recall": 0.762,
+        "f1": 0.727,
+        "false_alarm_rate": 0.129
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "deep",
+    "params": {
+      "sequence_length": 30,
+      "n_channels": 2
+    }
+  },
+  "cnn_transformer_v1": {
+    "model_id": "cnn_transformer_v1",
+    "name": "CNN-Transformer Attention Hybrid",
+    "architecture": "cnn_transformer",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:55:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.752,
+      "hss": 0.69,
+      "precision": 0.725,
+      "recall": 0.798,
+      "f1": 0.76,
+      "false_alarm_rate": 0.114,
+      "pr_auc": 0.77,
+      "brier_score": 0.086,
+      "nowcast_accuracy": 0.872,
+      "forecast_1h": {
+        "tss": 0.752,
+        "hss": 0.69,
+        "precision": 0.725,
+        "recall": 0.798,
+        "f1": 0.76,
+        "false_alarm_rate": 0.114
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "deep",
+    "params": {
+      "sequence_length": 30,
+      "n_channels": 2
+    }
+  },
+  "svm_v1": {
+    "model_id": "svm_v1",
+    "name": "Support Vector Machine (RBF Kernel)",
+    "architecture": "svm",
+    "version": "v1.0",
+    "created_at": "2026-09-08 09:15:00 UTC",
+    "training_dataset": "demo_aditya_l1_solexs_helios.csv",
+    "input_configuration": "fusion",
+    "metrics": {
+      "tss": 0.635,
+      "hss": 0.565,
+      "precision": 0.64,
+      "recall": 0.685,
+      "f1": 0.662,
+      "false_alarm_rate": 0.165,
+      "pr_auc": 0.655,
+      "brier_score": 0.125,
+      "nowcast_accuracy": 0.795,
+      "forecast_1h": {
+        "tss": 0.635,
+        "hss": 0.565,
+        "precision": 0.64,
+        "recall": 0.685,
+        "f1": 0.662,
+        "false_alarm_rate": 0.165
+      }
+    },
+    "checkpoint_path": "",
+    "scaler_path": "",
+    "active": false,
+    "model_kind": "classical",
+    "params": {
+      "kernel": "rbf",
+      "C": 1.0
+    }
+  }
+}
