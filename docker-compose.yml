@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - DATA_MODE=demo
+      - DATABASE_URL=sqlite:///./solarflare.db
+      - MODEL_DIR=./ml/saved_models
+    volumes:
+      - ./backend/solarflare.db:/app/solarflare.db
+      - ./backend/ml/saved_models:/app/ml/saved_models
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
