@@ -8,7 +8,7 @@ export const apiClient = axios.create({
   baseURL: API_BASE,
   // Preprocessing and model training can legitimately exceed 30 seconds on
   // the bundled demo dataset, especially when optional decomposition runs.
-  timeout: 1200000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
