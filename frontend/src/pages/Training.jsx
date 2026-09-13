@@ -11,7 +11,7 @@ import {
   Layers,
 } from 'lucide-react';
 import TrainingChart from '../charts/TrainingChart';
-import api from '../services/api';
+import { useJobs } from '../context/JobsContext';
 
 export default function Training() {
   const [modelType, setModelType] = useState('cnn_lstm_fusion');
@@ -22,68 +22,24 @@ export default function Training() {
   const [dropout, setDropout] = useState(0.3);
   const [classWeighting, setClassWeighting] = useState(true);
 
-  const [isTraining, setIsTraining] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [metrics, setMetrics] = useState(null);
-  const [statusText, setStatusText] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  // Job state (jobId, status, statusText, errorMsg, history, metrics) now
+  // lives in JobsContext, above the router -- so navigating to another page
+  // and back no longer loses progress or looks like training "stopped".
+  // The training job itself always keeps running server-side regardless;
+  // this just keeps the UI in sync with it.
+  const { training, startTraining } = useJobs();
+  const isTraining = training.status === 'pending' || training.status === 'running';
 
-  const handleStartTraining = async () => {
-    setIsTraining(true);
-    setErrorMsg('');
-    setStatusText(`Initializing training job for ${modelType}...`);
-    setHistory([]);
-    setMetrics(null);
-
-    try {
-      const { job_id } = await api.trainModel({
-        model_type: modelType,
-        epochs: Number(epochs),
-        batch_size: Number(batchSize),
-        sequence_length: Number(sequenceLength),
-        learning_rate: Number(learningRate),
-        dropout: Number(dropout),
-        class_weighting: Boolean(classWeighting),
-      });
-
-      setStatusText(`Training job queued (${job_id})...`);
-
-      // Training now runs in the background on the server -- poll for
-      // status instead of holding one long HTTP request open. This is what
-      // avoids the old "timeout of 120000ms exceeded" error: each poll is a
-      // small, fast request, and training can take as long as it needs.
-      const POLL_INTERVAL_MS = 3000;
-      const MAX_POLL_MS = 30 * 60 * 1000; // give up after 30 min, not 2 min
-      const startedAt = Date.now();
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        const job = await api.getTrainingJobStatus(job_id);
-
-        if (job.status === 'running') {
-          setStatusText(`Training in progress (job ${job_id})...`);
-        } else if (job.status === 'done') {
-          const res = job.result || {};
-          if (res.history) setHistory(res.history);
-          if (res.metrics) setMetrics(res.metrics);
-          setStatusText(`Training completed successfully. Model registered: ${res.model_id}`);
-          break;
-        } else if (job.status === 'failed') {
-          setErrorMsg(`Training failed: ${job.error}`);
-          break;
-        }
-
-        if (Date.now() - startedAt > MAX_POLL_MS) {
-          setErrorMsg('Training is taking unusually long (30+ min) -- check the backend logs.');
-          break;
-        }
-      }
-    } catch (err) {
-      setErrorMsg(`Training failed: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setIsTraining(false);
-    }
+  const handleStartTraining = () => {
+    startTraining({
+      model_type: modelType,
+      epochs: Number(epochs),
+      batch_size: Number(batchSize),
+      sequence_length: Number(sequenceLength),
+      learning_rate: Number(learningRate),
+      dropout: Number(dropout),
+      class_weighting: Boolean(classWeighting),
+    });
   };
 
   return (
@@ -104,17 +60,17 @@ export default function Training() {
         </p>
       </div>
 
-      {errorMsg && (
+      {training.errorMsg && (
         <div className="panel p-3 bg-rose-500/10 border-rose-500/30 text-xs font-mono text-rose-300 flex items-center gap-2">
           <AlertTriangle size={14} className="text-rose-400" />
-          {errorMsg}
+          {training.errorMsg}
         </div>
       )}
 
-      {statusText && !errorMsg && (
+      {training.statusText && !training.errorMsg && (
         <div className="panel p-3 bg-emerald-500/10 border-emerald-500/30 text-xs font-mono text-emerald-300 flex items-center gap-2">
           <CheckCircle2 size={14} className="text-emerald-400" />
-          {statusText}
+          {training.statusText}
         </div>
       )}
 
@@ -263,38 +219,38 @@ export default function Training() {
                 </p>
               </div>
               <span className="text-xs font-mono text-slate-400 bg-space-950 px-2.5 py-1 rounded border border-space-800">
-                {history.length} / {epochs} Epochs
+                {training.history.length} / {epochs} Epochs
               </span>
             </div>
 
-            <TrainingChart history={history} height={280} />
+            <TrainingChart history={training.history} height={280} />
           </div>
 
           {/* Validation Metrics Summary */}
-          {metrics && (
+          {training.metrics && (
             <div className="mt-5 pt-4 border-t border-space-800 grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-center">
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">Val Mean TSS</span>
                 <span className="text-base font-bold text-solar-400">
-                  {metrics.tss !== undefined ? Number(metrics.tss).toFixed(3) : '0.742'}
+                  {training.metrics.tss !== undefined ? Number(training.metrics.tss).toFixed(3) : '0.742'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">Val Mean HSS</span>
                 <span className="text-base font-bold text-sky-400">
-                  {metrics.hss !== undefined ? Number(metrics.hss).toFixed(3) : '0.685'}
+                  {training.metrics.hss !== undefined ? Number(training.metrics.hss).toFixed(3) : '0.685'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">Recall / POD</span>
                 <span className="text-base font-bold text-emerald-400">
-                  {metrics.recall !== undefined ? Number(metrics.recall).toFixed(3) : '0.790'}
+                  {training.metrics.recall !== undefined ? Number(training.metrics.recall).toFixed(3) : '0.790'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">False Alarm Rate</span>
                 <span className="text-base font-bold text-rose-400">
-                  {metrics.false_alarm_rate !== undefined ? Number(metrics.false_alarm_rate).toFixed(3) : '0.118'}
+                  {training.metrics.false_alarm_rate !== undefined ? Number(training.metrics.false_alarm_rate).toFixed(3) : '0.118'}
                 </span>
               </div>
             </div>

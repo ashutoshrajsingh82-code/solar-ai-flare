@@ -40,6 +40,7 @@ export const api = {
     spike_zscore_threshold: params.spike_zscore_threshold ?? 6.0,
     compute_stl: params.stl_decomposition ?? params.compute_stl ?? false,
   }).then(r => r.data),
+  getPreprocessJobStatus: (jobId) => apiClient.get(`/api/preprocess/${jobId}/status`).then(r => r.data),
   getPipelineStatus: () => apiClient.get('/api/pipeline/status').then(r => r.data),
   getFeatures: () => apiClient.get('/api/features').then(r => r.data),
 

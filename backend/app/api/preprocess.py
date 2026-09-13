@@ -1,19 +1,46 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from app.schemas.schemas import PreprocessRequest
 from app.services import preprocess_service
 from app.services.pipeline_state import pipeline_state
+from app.services.job_manager import preprocess_jobs
 
 router = APIRouter(prefix="/api", tags=["preprocess"])
 
 
-@router.post("/preprocess")
-def run_preprocess(req: PreprocessRequest):
+def _run_preprocess_job(job_id: str, req: PreprocessRequest):
+    """Runs in a background thread after the POST /preprocess response is sent."""
+    preprocess_jobs.set_running(job_id)
     try:
-        return preprocess_service.run_full_pipeline(req)
+        result = preprocess_service.run_full_pipeline(req)
+        preprocess_jobs.set_done(job_id, result)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        preprocess_jobs.set_failed(job_id, str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Preprocessing failed: {e}")
+        preprocess_jobs.set_failed(job_id, f"Preprocessing failed: {e}")
+
+
+@router.post("/preprocess")
+def run_preprocess(req: PreprocessRequest, background_tasks: BackgroundTasks):
+    """Kicks off the full clean -> align -> transform -> feature -> label
+    pipeline in the background and returns immediately with a job_id. Poll
+    GET /api/preprocess/{job_id}/status for progress/result. Cleaning +
+    resampling + STL decomposition + feature engineering over the full
+    dataset can take well over 2 minutes on Render's free-tier CPU,
+    especially with compute_stl enabled -- that used to blow past the
+    frontend's 120s axios timeout."""
+    if pipeline_state.raw_df is None:
+        raise HTTPException(status_code=422, detail="No dataset loaded. Load demo data or upload a dataset first.")
+    job_id = preprocess_jobs.create()
+    background_tasks.add_task(_run_preprocess_job, job_id, req)
+    return {"job_id": job_id, "status": "pending"}
+
+
+@router.get("/preprocess/{job_id}/status")
+def preprocess_status(job_id: str):
+    job = preprocess_jobs.to_dict(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Preprocessing job {job_id} not found")
+    return job
 
 
 @router.get("/pipeline/status")

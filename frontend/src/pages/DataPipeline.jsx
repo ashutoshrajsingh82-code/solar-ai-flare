@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import PipelineStage from '../components/PipelineStage';
 import api from '../services/api';
+import { useJobs } from '../context/JobsContext';
 
 const PIPELINE_DEFINITIONS = [
   {
@@ -51,10 +52,15 @@ const PIPELINE_DEFINITIONS = [
 export default function DataPipeline() {
   const [stages, setStages] = useState([]);
   const [selectedStageKey, setSelectedStageKey] = useState('featured');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [cadence, setCadence] = useState(60);
   const [preFlareWindow, setPreFlareWindow] = useState(60);
+
+  // Job state (jobId, status, message) now lives in JobsContext, above the
+  // router -- so navigating to another page and back no longer loses
+  // progress or looks like the pipeline "stopped". The job itself always
+  // keeps running server-side regardless; this just keeps the UI in sync.
+  const { pipeline, startPipeline } = useJobs();
+  const loading = pipeline.status === 'pending' || pipeline.status === 'running';
 
   const fetchStatus = async () => {
     try {
@@ -71,26 +77,31 @@ export default function DataPipeline() {
     fetchStatus();
   }, []);
 
-  const handleRunPipeline = async () => {
-    setLoading(true);
-    setMessage('');
-    try {
-      const res = await api.runPreprocess({
-        cadence_seconds: Number(cadence),
-        pre_flare_window_minutes: Number(preFlareWindow),
-        clean_duplicates: true,
-        remove_spikes: true,
-        // STL is useful for exploration but considerably slower; keep the
-        // normal interactive pipeline responsive by leaving it optional.
-        stl_decomposition: false,
-      });
-      setMessage('Preprocessing pipeline completed successfully.');
-      fetchStatus();
-    } catch (err) {
-      setMessage(`Error running pipeline: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  // While a pipeline job is running (tracked in context, survives
+  // navigation), keep refreshing the per-stage cards on this page so they
+  // update live -- this effect re-attaches whenever you land back on this
+  // page while a job is still in flight.
+  useEffect(() => {
+    if (!loading) return undefined;
+    const interval = setInterval(fetchStatus, 2000);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Also refresh once right after a job finishes, to catch the final stage.
+  useEffect(() => {
+    if (pipeline.status === 'done') fetchStatus();
+  }, [pipeline.status]);
+
+  const handleRunPipeline = () => {
+    startPipeline({
+      cadence_seconds: Number(cadence),
+      pre_flare_window_minutes: Number(preFlareWindow),
+      clean_duplicates: true,
+      remove_spikes: true,
+      // STL is useful for exploration but considerably slower; keep the
+      // normal interactive pipeline responsive by leaving it optional.
+      stl_decomposition: false,
+    });
   };
 
   const activeStageDetails = stages.find((s) => s.stage === selectedStageKey) || {};
@@ -141,9 +152,9 @@ export default function DataPipeline() {
         </div>
       </div>
 
-      {message && (
+      {pipeline.message && (
         <div className="panel p-3 bg-solar-500/10 border-solar-500/30 text-xs font-mono text-solar-300">
-          {message}
+          {pipeline.message}
         </div>
       )}
 

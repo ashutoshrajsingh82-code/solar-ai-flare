@@ -73,5 +73,6 @@ class JobManager:
         }
 
 
-# Module-level singleton -- mirrors how pipeline_state is used elsewhere.
+# Module-level singletons -- mirrors how pipeline_state is used elsewhere.
 training_jobs = JobManager()
+preprocess_jobs = JobManager()
