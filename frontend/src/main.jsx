@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { JobsProvider } from './context/JobsContext';
+import { JobsProvider } from './context/JobContext';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
