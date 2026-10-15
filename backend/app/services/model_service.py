@@ -17,7 +17,7 @@ from ml.features.windowing import build_windows, WindowConfig
 from ml.evaluation.metrics import evaluate_binary_forecast, multiclass_confusion_matrix
 
 DEEP_MODEL_TYPES = {"cnn_1d", "lstm", "cnn_lstm_fusion", "cnn_transformer"}
-CLASSICAL_MODEL_TYPES = {"logistic_regression", "random_forest", "svm"}
+CLASSICAL_MODEL_TYPES = set(MODEL_BUILDERS.keys())  # LR, RF, SVM, gradient_boosting + climatology / flux_rule / hard_soft_ratio_rule / two_feature_logreg
 
 FORECAST_HORIZON_COLS = ["forecast_1h", "forecast_3h", "forecast_6h", "forecast_12h", "forecast_24h"]
 

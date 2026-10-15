@@ -44,7 +44,7 @@ class PreprocessRequest(BaseModel):
 
 
 class TrainRequest(BaseModel):
-    model_type: str                         # "logistic_regression" | "random_forest" | "svm" | "cnn_1d" | "lstm" | "cnn_lstm_fusion" | "cnn_transformer"
+    model_type: str                         # baselines: "climatology" | "flux_rule" | "hard_soft_ratio_rule" | "two_feature_logreg" | "logistic_regression" | "random_forest" | "svm" | "gradient_boosting"; deep: "cnn_1d" | "lstm" | "cnn_lstm_fusion" | "cnn_transformer"
     input_configuration: str = "fusion"      # "solexs_only" | "helios_only" | "fusion"
     sequence_length: int = 60
     batch_size: int = 64

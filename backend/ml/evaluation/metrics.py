@@ -47,6 +47,18 @@ def probability_of_detection(tp, fp, tn, fn) -> float:
     return float(tp / denom) if denom > 0 else 0.0
 
 
+def brier_skill_score(y_true: np.ndarray, y_prob: np.ndarray, y_ref_prob) -> float:
+    """BSS = 1 - Brier(model) / Brier(reference). > 0 beats the reference (use the
+    train-split climatological flare rate as the reference); 0 = no better; < 0 = worse."""
+    y_true = np.asarray(y_true).astype(float)
+    ref = np.broadcast_to(np.asarray(y_ref_prob, dtype=float), y_true.shape)
+    b_ref = float(np.mean((ref - y_true) ** 2))
+    if b_ref == 0.0:
+        return 0.0
+    b_model = float(np.mean((np.asarray(y_prob, dtype=float) - y_true) ** 2))
+    return float(1.0 - b_model / b_ref)
+
+
 def evaluate_binary_forecast(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.5) -> dict:
     """Full metric suite for one binary forecast horizon."""
     y_true = np.asarray(y_true).astype(int)

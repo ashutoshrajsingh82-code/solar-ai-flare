@@ -18,7 +18,7 @@ REGISTRY_INDEX_FILENAME = "registry_index.json"
 class ModelRecord:
     model_id: str
     name: str
-    architecture: str          # "logistic_regression" | "random_forest" | "svm" | "cnn_1d" | "lstm" | "cnn_lstm_fusion" | "cnn_transformer"
+    architecture: str          # baselines (climatology, flux_rule, hard_soft_ratio_rule, two_feature_logreg, logistic_regression, random_forest, svm, gradient_boosting) | "cnn_1d" | "lstm" | "cnn_lstm_fusion" | "cnn_transformer"
     version: str
     created_at: str
     training_dataset: str

@@ -9,9 +9,11 @@ Each model predicts BOTH tasks:
 """
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.multioutput import MultiOutputClassifier
+
+from ml.models.baseline_rules import RULE_BUILDERS
 
 
 def build_logistic_regression(class_weight="balanced") -> LogisticRegression:
@@ -26,6 +28,14 @@ def build_random_forest(class_weight="balanced", n_estimators=200) -> RandomFore
         class_weight=class_weight,
         n_jobs=-1,
         random_state=42,
+    )
+
+
+def build_gradient_boosting(class_weight="balanced") -> HistGradientBoostingClassifier:
+    """Strongest tabular baseline; the bar a deep model should clear."""
+    return HistGradientBoostingClassifier(
+        max_depth=6, learning_rate=0.1, max_iter=200,
+        class_weight=class_weight, random_state=42,
     )
 
 
@@ -80,4 +90,8 @@ MODEL_BUILDERS = {
     "logistic_regression": lambda: BaselineMultiTaskModel(build_logistic_regression, "logistic_regression"),
     "random_forest": lambda: BaselineMultiTaskModel(build_random_forest, "random_forest"),
     "svm": lambda: BaselineMultiTaskModel(build_svm, "svm"),
+    "gradient_boosting": lambda: BaselineMultiTaskModel(build_gradient_boosting, "gradient_boosting"),
 }
+
+# No-skill + physics-rule baselines (climatology, flux_rule, hard_soft_ratio_rule, two_feature_logreg)
+MODEL_BUILDERS.update(RULE_BUILDERS)

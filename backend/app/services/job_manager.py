@@ -13,7 +13,7 @@ frontend should treat as "failed, please retry."
 import threading
 import time
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 
 class Job:
@@ -22,6 +22,10 @@ class Job:
         self.status = "pending"  # pending | running | done | failed
         self.result: Optional[dict] = None
         self.error: Optional[str] = None
+        # Live progress (e.g. per-epoch training records) so the frontend can
+        # render the loss curve while the job is still running.
+        self.stage: str = ""
+        self.progress: List[dict] = []
         self.created_at = time.time()
         self.updated_at = self.created_at
 
@@ -46,6 +50,17 @@ class JobManager:
     def set_failed(self, job_id: str, error: str):
         self._update(job_id, status="failed", error=error)
 
+    def set_stage(self, job_id: str, stage: str):
+        self._update(job_id, stage=stage)
+
+    def add_progress(self, job_id: str, record: dict):
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if not job:
+                return
+            job.progress.append(record)
+            job.updated_at = time.time()
+
     def _update(self, job_id: str, **kwargs):
         with self._lock:
             job = self._jobs.get(job_id)
@@ -68,6 +83,8 @@ class JobManager:
             "status": job.status,
             "result": job.result,
             "error": job.error,
+            "stage": job.stage,
+            "progress": list(job.progress),
             "created_at": job.created_at,
             "updated_at": job.updated_at,
         }

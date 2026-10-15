@@ -36,6 +36,9 @@ const initialPipelineState = {
 const MAX_TRAIN_POLL_MS = 30 * 60 * 1000; // 30 min
 const MAX_PIPELINE_POLL_MS = 20 * 60 * 1000; // 20 min
 const TRAIN_POLL_INTERVAL_MS = 3000;
+// Give up after this many CONSECUTIVE failed polls (network down / server gone)
+// instead of silently retrying until the 30 min timeout.
+const MAX_CONSECUTIVE_POLL_ERRORS = 5;
 const PIPELINE_POLL_INTERVAL_MS = 2000;
 
 export function JobsProvider({ children }) {
@@ -44,6 +47,7 @@ export function JobsProvider({ children }) {
 
   const trainingTimerRef = useRef(null);
   const trainingStartedAtRef = useRef(0);
+  const trainingPollErrorsRef = useRef(0);
   const pipelineTimerRef = useRef(null);
   const pipelineStartedAtRef = useRef(0);
 
@@ -61,15 +65,33 @@ export function JobsProvider({ children }) {
     }
   };
 
+  const failTraining = (jobId, message) => {
+    setTraining((prev) => (prev.jobId !== jobId ? prev : {
+      ...prev,
+      status: 'failed',
+      statusText: '',
+      errorMsg: message,
+    }));
+    stopTrainingPolling();
+  };
+
   const pollTrainingOnce = async (jobId) => {
     try {
       const job = await api.getTrainingJobStatus(jobId);
+      trainingPollErrorsRef.current = 0;
 
-      if (job.status === 'running') {
+      if (job.status === 'pending' || job.status === 'running') {
+        // Stream per-epoch records so the loss chart fills in live instead of
+        // staying empty until the whole run finishes.
+        const live = Array.isArray(job.progress) ? job.progress : [];
+        const last = live[live.length - 1];
+        const stage = job.stage ? ` ${job.stage}` : '';
+        const epochInfo = last ? ` -- epoch ${last.epoch} done (val loss ${Number(last.val_loss).toFixed(4)})` : '';
         setTraining((prev) => (prev.jobId !== jobId ? prev : {
           ...prev,
           status: 'running',
-          statusText: `Training in progress (job ${jobId})...`,
+          statusText: `Training in progress (job ${jobId}).${stage}${epochInfo}`,
+          history: live.length ? live : prev.history,
         }));
       } else if (job.status === 'done') {
         const res = job.result || {};
@@ -77,30 +99,35 @@ export function JobsProvider({ children }) {
           ...prev,
           status: 'done',
           statusText: `Training completed successfully. Model registered: ${res.model_id}`,
-          history: res.history || prev.history,
+          history: (res.history && res.history.length) ? res.history : prev.history,
           metrics: res.metrics || prev.metrics,
         }));
         stopTrainingPolling();
+        return;
       } else if (job.status === 'failed') {
-        setTraining((prev) => (prev.jobId !== jobId ? prev : {
-          ...prev,
-          status: 'failed',
-          errorMsg: `Training failed: ${job.error}`,
-        }));
-        stopTrainingPolling();
+        failTraining(jobId, `Training failed: ${job.error}`);
+        return;
       }
 
       if (Date.now() - trainingStartedAtRef.current > MAX_TRAIN_POLL_MS) {
-        setTraining((prev) => (prev.jobId !== jobId ? prev : {
-          ...prev,
-          errorMsg: 'Training is taking unusually long (30+ min) -- check the backend logs.',
-        }));
-        stopTrainingPolling();
+        // Mark the job as failed (not just show a banner) so the form is
+        // unlocked and the user can retry; the old code left status "running"
+        // forever, which kept the whole form disabled.
+        failTraining(jobId, 'Training is taking unusually long (30+ min) -- check the backend logs.');
       }
     } catch (e) {
-      // Transient network hiccup on a single poll shouldn't kill tracking --
-      // just log it and let the next tick try again.
-      console.error('Training poll failed:', e);
+      // A 404 means the server no longer knows this job (process restarted,
+      // e.g. a Render free-tier spin-down). Retrying can never succeed, so
+      // fail immediately rather than polling until the timeout.
+      if (e.response?.status === 404) {
+        failTraining(jobId, 'Training job was lost (the backend likely restarted). Please run the preprocessing pipeline if needed and start training again.');
+        return;
+      }
+      trainingPollErrorsRef.current += 1;
+      console.error(`Training poll failed (${trainingPollErrorsRef.current}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, e);
+      if (trainingPollErrorsRef.current >= MAX_CONSECUTIVE_POLL_ERRORS) {
+        failTraining(jobId, `Lost connection to the backend while training: ${e.message}`);
+      }
     }
   };
 
@@ -110,6 +137,7 @@ export function JobsProvider({ children }) {
     try {
       const { job_id } = await api.trainModel(config);
       trainingStartedAtRef.current = Date.now();
+      trainingPollErrorsRef.current = 0;
       setTraining((prev) => ({ ...prev, jobId: job_id, statusText: `Training job queued (${job_id})...` }));
       trainingTimerRef.current = setInterval(() => pollTrainingOnce(job_id), TRAIN_POLL_INTERVAL_MS);
     } catch (err) {

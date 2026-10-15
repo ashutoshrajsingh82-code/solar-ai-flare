@@ -160,9 +160,11 @@ class CNNTransformerHybrid(nn.Module):
         return self.head(z)
 
 
+# `dropout` is now forwarded to every architecture. Previously the value chosen
+# in the Training UI was accepted by the API but silently ignored here.
 DEEP_MODEL_BUILDERS = {
-    "cnn_1d": lambda n_channels=2: CNN1D(n_channels=n_channels),
-    "lstm": lambda n_channels=2: LSTMModel(n_channels=n_channels),
-    "cnn_lstm_fusion": lambda n_channels=2: CNNLSTMHybrid(n_channels=n_channels),
-    "cnn_transformer": lambda n_channels=2: CNNTransformerHybrid(n_channels=n_channels),
+    "cnn_1d": lambda n_channels=2, dropout=0.3: CNN1D(n_channels=n_channels, dropout=dropout),
+    "lstm": lambda n_channels=2, dropout=0.3: LSTMModel(n_channels=n_channels, dropout=dropout),
+    "cnn_lstm_fusion": lambda n_channels=2, dropout=0.3: CNNLSTMHybrid(n_channels=n_channels, dropout=dropout),
+    "cnn_transformer": lambda n_channels=2, dropout=0.3: CNNTransformerHybrid(n_channels=n_channels, dropout=dropout),
 }

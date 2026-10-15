@@ -101,6 +101,11 @@ export default function Training() {
                 <option value="random_forest">Random Forest (Classical Baseline)</option>
                 <option value="logistic_regression">Logistic Regression (Linear Baseline)</option>
                 <option value="svm">SVM (Kernel Baseline)</option>
+                <option value="gradient_boosting">Gradient Boosting (Strongest Tabular Baseline)</option>
+                <option value="two_feature_logreg">Flux + Trend Logistic (Operational-Style Baseline)</option>
+                <option value="flux_rule">Flux Threshold Rule (Physics Baseline)</option>
+                <option value="hard_soft_ratio_rule">Hard/Soft Ratio Rule (Neupert Baseline, fusion only)</option>
+                <option value="climatology">Climatology (No-Skill Reference)</option>
               </select>
             </div>
 

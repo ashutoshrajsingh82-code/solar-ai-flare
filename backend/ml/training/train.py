@@ -8,6 +8,7 @@ Handles:
     weighted CrossEntropy + BCEWithLogitsLoss(pos_weight=...) for deep models
   - Multi-task loss: total = alpha * CE(nowcast) + beta * BCE(forecast)
 """
+import os
 import time
 import numpy as np
 import torch
@@ -32,6 +33,21 @@ class TrainConfig:
     class_weighting: bool = True
     n_channels: int = 2
     device: str = "cpu"
+
+
+def _limit_torch_threads(max_threads: int = 4) -> None:
+    """In CPU-limited containers (Docker/Render) torch defaults to the HOST's
+    core count, so it spawns far more threads than the cgroup quota allows and
+    gets throttled to a crawl. Cap to the cores this process may actually use."""
+    try:
+        usable = len(os.sched_getaffinity(0))
+    except AttributeError:  # non-Linux
+        usable = os.cpu_count() or 1
+    n = max(1, min(max_threads, usable))
+    try:
+        torch.set_num_threads(n)
+    except Exception:
+        pass
 
 
 def compute_class_weights(y: np.ndarray, n_classes: int) -> torch.Tensor:
@@ -64,12 +80,13 @@ def train_deep_model(
     should_stop() -> bool allows cooperative cancellation.
     """
     cfg = config or TrainConfig()
+    _limit_torch_threads()
     device = torch.device(cfg.device)
 
     model_fn = DEEP_MODEL_BUILDERS.get(cfg.model_type)
     if model_fn is None:
         raise ValueError(f"Unknown deep model type: {cfg.model_type}")
-    model = model_fn(n_channels=cfg.n_channels).to(device)
+    model = model_fn(n_channels=cfg.n_channels, dropout=cfg.dropout).to(device)
 
     train_ds = TensorDataset(
         torch.tensor(X_train, dtype=torch.float32),

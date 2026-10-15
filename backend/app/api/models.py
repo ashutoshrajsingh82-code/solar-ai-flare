@@ -1,7 +1,12 @@
+import logging
+import traceback
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from app.schemas.schemas import TrainRequest, ModelSelectRequest
 from app.services import model_service
 from app.services.job_manager import training_jobs
+
+logger = logging.getLogger("solar-flare-ai")
 
 router = APIRouter(prefix="/api/models", tags=["models"])
 
@@ -10,11 +15,16 @@ def _run_training_job(job_id: str, req: TrainRequest):
     """Runs in a background thread after the POST /train response is sent."""
     training_jobs.set_running(job_id)
     try:
-        result = model_service.train_model(req)
+        result = model_service.train_model(
+            req,
+            progress_callback=lambda rec: training_jobs.add_progress(job_id, rec),
+            stage_callback=lambda s: training_jobs.set_stage(job_id, s),
+        )
         training_jobs.set_done(job_id, result)
     except ValueError as e:
         training_jobs.set_failed(job_id, str(e))
-    except Exception as e:
+    except BaseException as e:  # never leave a job stuck in "running"
+        logger.error("Training job %s crashed:\n%s", job_id, traceback.format_exc())
         training_jobs.set_failed(job_id, f"Training failed: {e}")
 
 
