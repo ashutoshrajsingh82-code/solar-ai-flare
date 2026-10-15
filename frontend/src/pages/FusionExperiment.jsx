@@ -81,6 +81,10 @@ export default function FusionExperiment() {
               >
                 <option value="random_forest">Random Forest</option>
                 <option value="logistic_regression">Logistic Regression</option>
+                <option value="gradient_boosting">Gradient Boosting</option>
+                <option value="two_feature_logreg">Flux + Trend Logistic</option>
+                <option value="flux_rule">Flux Threshold Rule</option>
+                <option value="climatology">Climatology (No-Skill)</option>
                 <option value="cnn_1d">1D-CNN</option>
                 <option value="cnn_lstm_fusion">CNN-LSTM Hybrid</option>
               </select>

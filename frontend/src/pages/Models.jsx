@@ -11,7 +11,7 @@ import {
   Activity,
   Maximize2,
 } from 'lucide-react';
-import ModelCard from '../components/ModelCard';
+import ModelCard, { modelTier } from '../components/ModelCard';
 import api from '../services/api';
 
 export default function Models() {
@@ -53,6 +53,22 @@ export default function Models() {
       setNotification(`Failed to select model: ${e.response?.data?.detail || e.message}`);
     }
   };
+
+  // Group the registry into the baseline ladder (simplest first) and the deep models.
+  const byLadder = (a, b) => modelTier(a).order - modelTier(b).order;
+  const baselineModels = models.filter((m) => modelTier(m).order < 100).sort(byLadder);
+  const deepModels = models.filter((m) => modelTier(m).order >= 100);
+
+  const renderCards = (list) =>
+    list.map((m) => (
+      <ModelCard
+        key={m.model_id}
+        model={m}
+        isActive={m.model_id === activeModelId}
+        onSelect={handleSelectModel}
+        onInspect={(mod) => setSelectedModel(mod)}
+      />
+    ));
 
   return (
     <div className="space-y-6">
@@ -160,18 +176,34 @@ export default function Models() {
         </div>
       </div>
 
-      {/* Model Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {models.map((m) => (
-          <ModelCard
-            key={m.model_id}
-            model={m}
-            isActive={m.model_id === activeModelId}
-            onSelect={handleSelectModel}
-            onInspect={(mod) => setSelectedModel(mod)}
-          />
-        ))}
-      </div>
+      {/* Deep models */}
+      {deepModels.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest font-mono">
+            Deep Sequence Models
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{renderCards(deepModels)}</div>
+        </div>
+      )}
+
+      {/* Baseline ladder */}
+      {baselineModels.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-1">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest font-mono">
+              Baseline Ladder (simplest to strongest)
+            </h3>
+            <span className="text-[11px] text-slate-500 font-mono">
+              No-skill reference, physics rules, then classical ML. A deep model should clear the top rung.
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">{renderCards(baselineModels)}</div>
+          <p className="text-[11px] text-slate-500 font-mono">
+            Cards marked Benchmark Reference show metrics from the baseline benchmark (chronological split, threshold 0.5,
+            fusion input) and cannot be set active until you train that type from the Training page.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

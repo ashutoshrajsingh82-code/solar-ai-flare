@@ -1,5 +1,28 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Cpu, CheckCircle, Zap, Activity, Award } from 'lucide-react';
+
+// Where each model sits on the baseline ladder (used for the badge and for grouping on the Models page).
+const TIERS = {
+  climatology: { label: 'No-Skill Reference', order: 0, cls: 'bg-slate-500/15 text-slate-300 border-slate-500/30' },
+  flux_rule: { label: 'Physics Rule', order: 1, cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
+  hard_soft_ratio_rule: { label: 'Physics Rule', order: 2, cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
+  two_feature_logreg: { label: 'Operational-Style', order: 3, cls: 'bg-teal-500/10 text-teal-300 border-teal-500/30' },
+  logistic_regression: { label: 'Classical ML', order: 4, cls: 'bg-sky-500/10 text-sky-300 border-sky-500/30' },
+  random_forest: { label: 'Classical ML', order: 5, cls: 'bg-sky-500/10 text-sky-300 border-sky-500/30' },
+  svm: { label: 'Classical ML', order: 6, cls: 'bg-sky-500/10 text-sky-300 border-sky-500/30' },
+  gradient_boosting: { label: 'Classical ML', order: 7, cls: 'bg-sky-500/10 text-sky-300 border-sky-500/30' },
+};
+
+export function modelTier(model) {
+  return (
+    TIERS[model?.architecture] || {
+      label: 'Deep Sequence',
+      order: 100,
+      cls: 'bg-solar-500/10 text-solar-300 border-solar-500/30',
+    }
+  );
+}
 
 export default function ModelCard({
   model,
@@ -9,10 +32,14 @@ export default function ModelCard({
 }) {
   const metrics = model.metrics || {};
   const forecast1h = metrics.forecast_1h || {};
-  const tss = forecast1h.tss ?? metrics.tss ?? 0.74;
-  const hss = forecast1h.hss ?? metrics.hss ?? 0.68;
-  const f1 = forecast1h.f1 ?? metrics.f1 ?? 0.72;
-  const far = forecast1h.false_alarm_rate ?? metrics.false_alarm_rate ?? 0.12;
+  // No made-up fallbacks: a metric that was not computed shows as an em dash.
+  const tss = forecast1h.tss ?? metrics.tss ?? null;
+  const hss = forecast1h.hss ?? metrics.hss ?? null;
+  const f1 = forecast1h.f1 ?? metrics.f1 ?? null;
+  const far = forecast1h.false_alarm_rate ?? metrics.false_alarm_rate ?? null;
+  const fmt = (v) => (typeof v === 'number' ? v.toFixed(3) : '\u2014');
+  const tier = modelTier(model);
+  const referenceOnly = Boolean(model.params?.reference_only);
 
   const isDeep = model.architecture?.includes('cnn') || model.architecture?.includes('lstm') || model.architecture?.includes('transformer');
 
@@ -48,7 +75,15 @@ export default function ModelCard({
           </div>
         </div>
 
-        <div className="mt-3 inline-flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${tier.cls}`}>
+            {tier.label}
+          </span>
+          {referenceOnly && (
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-400 border border-space-700">
+              Benchmark Reference
+            </span>
+          )}
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-300 border border-space-700">
             Input: {model.input_configuration || 'SoLEXS + HEL1OS (Fused)'}
           </span>
@@ -64,25 +99,25 @@ export default function ModelCard({
           <div className="bg-space-950/60 p-2 rounded border border-space-800">
             <span className="text-[10px] text-slate-400 block font-sans">TSS</span>
             <span className="text-sm font-bold text-solar-400">
-              {typeof tss === 'number' ? tss.toFixed(3) : tss}
+              {fmt(tss)}
             </span>
           </div>
           <div className="bg-space-950/60 p-2 rounded border border-space-800">
             <span className="text-[10px] text-slate-400 block font-sans">HSS</span>
             <span className="text-sm font-bold text-sky-400">
-              {typeof hss === 'number' ? hss.toFixed(3) : hss}
+              {fmt(hss)}
             </span>
           </div>
           <div className="bg-space-950/60 p-2 rounded border border-space-800">
             <span className="text-[10px] text-slate-400 block font-sans">F1</span>
             <span className="text-sm font-bold text-emerald-400">
-              {typeof f1 === 'number' ? f1.toFixed(3) : f1}
+              {fmt(f1)}
             </span>
           </div>
           <div className="bg-space-950/60 p-2 rounded border border-space-800">
             <span className="text-[10px] text-slate-400 block font-sans">FAR</span>
             <span className="text-sm font-bold text-rose-400">
-              {typeof far === 'number' ? far.toFixed(3) : far}
+              {fmt(far)}
             </span>
           </div>
         </div>
@@ -96,7 +131,14 @@ export default function ModelCard({
           View Topology
         </button>
 
-        {!isActive ? (
+        {referenceOnly ? (
+          <Link
+            to={`/training?model=${model.architecture}`}
+            className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-space-800 hover:bg-solar-500 hover:text-space-950 text-slate-200 border border-space-700 transition-all"
+          >
+            Train to Deploy
+          </Link>
+        ) : !isActive ? (
           <button
             onClick={() => onSelect(model.model_id)}
             className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-space-800 hover:bg-solar-500 hover:text-space-950 text-slate-200 border border-space-700 transition-all"
