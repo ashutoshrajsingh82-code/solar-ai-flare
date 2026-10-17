@@ -1,4 +1,4 @@
-# Aditya-L1 Solar Flare Intelligence System
+# ARUN-X: Automated Radiation Understanding Network for Solar Flare Forecasting
 
 ## Dual-Instrument X-Ray Early Warning and Prediction System
 
