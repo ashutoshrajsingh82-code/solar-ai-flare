@@ -1,296 +1,597 @@
 # Aditya-L1 Solar Flare Intelligence System
-### Dual-Instrument X-Ray Early Warning & Prediction System (SoLEXS + HEL1OS Fusion)
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B%20%7C%203.13-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+## Dual-Instrument X-Ray Early Warning and Prediction System
 
-An operational research prototype for sub-hour solar flare early warning and multi-horizon probabilistic forecasting utilizing dual-channel X-ray observations from India's maiden solar observatory, **ISRO Aditya-L1**.
+A full-stack research prototype for solar flare nowcasting and probabilistic forecasting using fused soft and hard X-ray observations from the Solar Low Energy X-ray Spectrometer (SoLEXS) and High Energy L1 Orbiting X-ray Spectrometer (HEL1OS) aboard India's Aditya-L1 solar observatory.
 
----
+The system integrates data ingestion, preprocessing, feature engineering, machine learning, deep learning, multi-instrument fusion, alert management, and interactive visualization through a mission control dashboard.
 
-## 1. Scientific Problem & Physical Motivation
+## Technology Stack
 
-Solar flares are sudden, catastrophic releases of stored magnetic energy in the solar corona via magnetic reconnection. Major M-class and X-class flares produce intense bursts of electromagnetic radiation and solar energetic particles (SEPs) that impact:
-- High-frequency (HF) radio communications
-- Global Positioning System (GPS / GNSS) navigation accuracy
-- Low Earth Orbit (LEO) satellite electronics and orbital decay via atmospheric drag
-- Terrestrial power grids and telecommunication networks
+- **Programming Language:** Python 3.11+
+- **Backend:** FastAPI
+- **Frontend:** React 18, Vite, Tailwind CSS
+- **Machine Learning:** Scikit-learn, XGBoost
+- **Deep Learning:** TensorFlow, Keras, or PyTorch, depending on the selected implementation
+- **Data Processing:** NumPy, Pandas, SciPy
+- **Data Formats:** CSV, FITS
+- **Database:** SQLite
+- **Deployment:** Docker, Docker Compose
+- **Testing:** Pytest
 
-### Dual Instruments: SoLEXS vs HEL1OS
-The system treats the incoming telemetry not as images, but as a **synchronized two-channel time series**:
+## 1. Scientific Problem and Motivation
 
-1. **SoLEXS (Solar Low Energy X-ray Spectrometer)**:
-   - **Energy Range**: 1–30 keV
-   - **Physics**: Soft / thermal X-rays emitted by coronal plasma heated to 10–30 million Kelvin. Captures the gradual thermal accumulation and cooling phase.
-2. **HEL1OS (High Energy L1 Orbiting X-ray Spectrometer)**:
-   - **Energy Range**: 10–150 keV
-   - **Physics**: Hard / non-thermal bremsstrahlung radiation produced by relativistic electron beams accelerated into the chromosphere. Captures the rapid, impulsive component.
+Solar flares are sudden releases of magnetic energy in the solar atmosphere, primarily associated with magnetic reconnection. Significant solar flare events can affect space-based and terrestrial technological infrastructure, including:
 
-### The Neupert Effect Hypothesis & Hard-to-Soft Ratio
-According to the **Neupert Effect**, impulsive non-thermal electron acceleration directly powers the heating of flare loops. Consequently, **HEL1OS hard X-rays typically peak 2 to 8 minutes prior to the SoLEXS soft X-ray peak**. 
+- High-frequency radio communications
+- Global Navigation Satellite Systems (GNSS)
+- Satellite electronics and communications
+- Earth's upper atmosphere and satellite orbital drag
+- Electrical power and communication infrastructure through associated space-weather effects
 
-The system computes a core domain-specific feature:
-$$\text{Hard-to-Soft Ratio} = \frac{\text{HEL1OS Flux}}{\text{SoLEXS Flux} + \epsilon}$$
+Timely identification of developing solar flares is important for space-weather monitoring and risk assessment.
 
-A rapid spike in this ratio provides critical advance warning before thermal peak intensities are reached.
+### 1.1 SoLEXS: Soft X-Ray Observations
 
----
+SoLEXS observes solar X-ray emissions in the approximate energy range of 1–30 keV.
 
-## 2. Prediction Tasks
+Soft X-ray measurements provide information about the thermal plasma response during solar flare development, including the rise, peak, and decay phases.
 
-The platform simultaneously executes two prediction tasks using a shared latent representation:
+### 1.2 HEL1OS: Hard X-Ray Observations
 
-1. **Nowcasting (Current Solar State)**:
-   - Evaluates the Sun at timestamp $t$ into 4 discrete states:
-     - `Quiet` (0): Baseline background corona
-     - `Pre-Flare` (1): Impulsive hard X-ray rise / thermal pre-heating
-     - `Flare In Progress` (2): Active flux maximum
-     - `Decay Phase` (3): Post-peak exponential thermal cooling
-2. **Probabilistic Forecasting (Future Time Windows)**:
-   - Binary probability of an **M1.0+ or X-class flare onset** occurring within:
-     - **$\le$ 1 Hour**
-     - **$\le$ 3 Hours**
-     - **$\le$ 6 Hours**
-     - **$\le$ 12 Hours**
-     - **$\le$ 24 Hours**
+HEL1OS observes hard X-ray emissions over an approximate energy range of 10–150 keV.
 
----
+Hard X-ray observations help characterize energetic electron populations and impulsive energy-release processes associated with solar flares.
+
+### 1.3 Multi-Instrument Data Fusion
+
+The system combines observations from both instruments to investigate whether their complementary temporal and spectral information improves flare detection and forecasting.
+
+A domain-specific feature is the hard-to-soft intensity ratio:
+
+\[
+R(t)=\frac{F_{\mathrm{hard}}(t)}
+{F_{\mathrm{soft}}(t)+\epsilon}
+\]
+
+where:
+
+- \(F_{\mathrm{hard}}(t)\) represents the calibrated HEL1OS intensity.
+- \(F_{\mathrm{soft}}(t)\) represents the calibrated SoLEXS intensity.
+- \(\epsilon\) is a small positive constant that prevents division by zero.
+
+A rise in this ratio may indicate an increase in hard X-ray emission relative to soft X-ray emission. Its forecasting value must be established empirically using properly aligned observations and independent evaluation data.
+
+The Neupert effect provides a physical motivation for examining the temporal relationship between hard and soft X-ray emissions. However, the timing relationship varies between events and should not be treated as a universal fixed lead time.
+
+## 2. Prediction Objectives
+
+The system supports two complementary prediction tasks.
+
+### 2.1 Solar Flare Nowcasting
+
+Nowcasting estimates the current solar activity state using recent X-ray observations and engineered temporal features.
+
+The proposed four-class classification scheme is:
+
+| Class | Description |
+|---|---|
+| Quiet | Background solar activity without a detected flare |
+| Pre-Flare | Observed signatures potentially associated with developing flare activity |
+| Flare In Progress | Active flare phase |
+| Decay Phase | Declining emission following the flare peak |
+
+The classes require consistent operational definitions and reliable event annotations before model training.
+
+### 2.2 Probabilistic Forecasting
+
+The forecasting component estimates the probability of an M1.0-or-higher solar flare onset within the following time horizons:
+
+- Within 1 hour
+- Within 3 hours
+- Within 6 hours
+- Within 12 hours
+- Within 24 hours
+
+Each horizon produces a binary probabilistic prediction.
+
+For a horizon \(h\), the target can be defined as:
+
+\[
+y_h(t)=
+\begin{cases}
+1, & \text{if an eligible flare begins within }(t,t+h] \\
+0, & \text{otherwise}
+\end{cases}
+\]
+
+Forecast targets must be constructed using event onset times, with appropriate handling of overlapping events and incomplete observations.
 
 ## 3. System Architecture
 
+The application follows a modular architecture consisting of data ingestion, preprocessing, feature extraction, model training, inference, alert management, and visualization.
+
 ```mermaid
-graph TD
-    subgraph Data Sources
-        S1[Aditya-L1 SoLEXS 1-30 keV Soft X-Ray] --> B[Data Ingestion]
-        S2[Aditya-L1 HEL1OS 10-150 keV Hard X-Ray] --> B
-        S3[GOES Flare Event Catalogue Labels] --> B
-    end
+flowchart TD
+    A[SoLEXS Observations] --> D[Data Ingestion]
+    B[HEL1OS Observations] --> D
+    C[Flare Event Catalogue] --> D
 
-    subgraph Preprocessing Pipeline
-        B --> QC[Quality Control & Spike Removal]
-        QC --> AL[Timestamp Alignment & Cadence Resampling 60s]
-        AL --> SC[Log10 Transformation & StandardScaler Fit on Train Split Only]
-        SC --> FE[Feature Engineering: Rolling Stats, Slopes, Hard/Soft Ratio, STL]
-        FE --> WG[Sliding Window Sequence Generator]
-    end
+    D --> E[Quality Control]
+    E --> F[Timestamp Alignment and Resampling]
+    F --> G[Transformation and Scaling]
+    G --> H[Feature Engineering]
+    H --> I[Sliding Window Generation]
 
-    subgraph Machine Learning & Deep Learning Suite
-        FE --> M1[Classical Baselines: Logistic Regression, Random Forest, SVM]
-        WG --> M2[1D-CNN Spectro-Temporal Extractor]
-        WG --> M3[LSTM Sequence Memory Network]
-        WG --> M4[CNN-LSTM Hybrid Dual-Head Fusion]
-        WG --> M5[CNN-Transformer Attention Hybrid]
-    end
+    H --> J[Classical ML Models]
+    I --> K[1D CNN]
+    I --> L[LSTM]
+    I --> M[CNN-LSTM]
+    I --> N[CNN-Transformer]
 
-    subgraph Dual Inference Heads
-        M4 --> H1[Nowcast Head: 4-Class Softmax]
-        M4 --> H2[Forecast Head: 5 Binary Sigmoids 1h, 3h, 6h, 12h, 24h]
-    end
+    M --> O[Nowcasting Head]
+    M --> P[Forecasting Head]
 
-    subgraph Operational Dispatch & Mission Control
-        H1 --> AE[Alert Engine: SQLite Persistence]
-        H2 --> AE
-        AE --> API[FastAPI REST API Layer]
-        API --> SIM[Sequential Historical Telemetry Playback Simulator 1x-50x]
-        API --> UI[React Vite Mission Control Dashboard]
-    end
+    J --> Q[Evaluation and Model Registry]
+    K --> Q
+    L --> Q
+    N --> Q
+    O --> R[Inference and Alert Engine]
+    P --> R
+    Q --> R
+
+    R --> S[FastAPI REST API]
+    S --> T[React Mission Control Dashboard]
+    S --> U[SQLite Persistence]
 ```
 
----
+### 3.1 Data Ingestion
 
-## 4. Multi-Task Model Loss Function
+The ingestion layer accepts supported CSV and FITS observations from SoLEXS and HEL1OS, together with relevant solar flare event catalogues.
 
-The primary candidate architecture (**CNN-LSTM Hybrid**) shares an encoder across both heads and optimizes a joint weighted loss:
+The ingestion process validates file structure, timestamps, measurement columns, and data availability.
 
-$$\mathcal{L}_{\text{total}} = \alpha \cdot \mathcal{L}_{\text{CE}}(\hat{y}_{\text{nowcast}}, y_{\text{nowcast}}) + \beta \cdot \sum_{h \in \{1,3,6,12,24\}} w_h \cdot \mathcal{L}_{\text{BCE}}(\hat{y}_{\text{fc}, h}, y_{\text{fc}, h})$$
+### 3.2 Preprocessing
 
-- **Class Imbalance**: Positive flare occurrences are rare ($<3\%$). Deep models use inverse-frequency class weights for Cross-Entropy and `pos_weight` for `BCEWithLogitsLoss`.
-- **Leakage Prevention**: All time-series data is split **chronologically** (earliest 70% train, next 15% validation, latest 15% test). Scalers are strictly fit on the training split.
+The preprocessing pipeline includes:
 
----
+1. Data quality checks and invalid-value handling.
+2. Identification of missing measurements and anomalous spikes.
+3. Timestamp alignment between instruments.
+4. Resampling to a common cadence, such as 60 seconds, where scientifically appropriate.
+5. Logarithmic transformation of positive intensity measurements.
+6. Feature scaling using parameters fitted exclusively on the training data.
+7. Generation of synchronized sliding-window sequences.
 
-## 5. Evaluation Metrics for Space Weather
+Resampling and interpolation must preserve data gaps and avoid introducing artificial flare signatures.
 
-Accuracy is misleading for rare-event forecasting (an unskilled model predicting "Quiet" 100% of the time scores $>97\%$ accuracy). We evaluate models using:
+### 3.3 Feature Engineering
 
-- **True Skill Statistic (TSS)**:
-  $$\text{TSS} = \text{POD} - \text{POFD} = \frac{\text{TP}}{\text{TP} + \text{FN}} - \frac{\text{FP}}{\text{FP} + \text{TN}}$$
-  Range: $[-1, 1]$, where $0$ indicates no skill and $1$ is perfect. Unbiased by class prevalence.
-- **Heidke Skill Score (HSS)**:
-  Measures accuracy relative to random chance.
-- **Probability of Detection (POD / Recall)**: $\frac{\text{TP}}{\text{TP} + \text{FN}}$
-- **False Alarm Rate (FAR)**: $\frac{\text{FP}}{\text{FP} + \text{TP}}$
-- **Brier Score**: Mean squared error of probabilistic predictions ($\to 0$ denotes ideal calibration).
+The proposed feature set includes:
 
----
+- Soft X-ray intensity
+- Hard X-ray intensity
+- Hard-to-soft intensity ratio
+- Rolling mean and standard deviation
+- First-order temporal derivatives
+- Intensity growth rates and slopes
+- Local maxima and minima
+- Temporal variability measures
+- Decomposition-based trend and residual features, where appropriate
+
+All features must be computed using information available at or before the prediction timestamp to prevent temporal leakage.
+
+### 3.4 Model Suite
+
+The system supports the evaluation of multiple model families.
+
+**Classical machine learning models**
+
+- Logistic Regression
+- Random Forest
+- Support Vector Machine
+- XGBoost
+
+**Deep learning models**
+
+- One-dimensional Convolutional Neural Network (1D-CNN)
+- Long Short-Term Memory network (LSTM)
+- CNN-LSTM hybrid
+- CNN-Transformer hybrid
+
+The CNN-LSTM model is a candidate primary architecture. It combines local temporal feature extraction with sequential modeling.
+
+A shared representation can feed two prediction heads:
+
+- A four-class softmax head for nowcasting.
+- A multi-horizon sigmoid head for probabilistic forecasting.
+
+The implementation should select the best model using validation performance rather than assuming that a particular architecture is superior in advance.
+
+## 4. Multi-Task Learning Objective
+
+The proposed multi-task model combines nowcasting and forecasting losses:
+
+\[
+\mathcal{L}_{\mathrm{total}} =
+\alpha\mathcal{L}_{\mathrm{CE}}
++
+\beta\sum_{h\in H}w_h\mathcal{L}_{\mathrm{BCE},h}
+\]
+
+where:
+
+- \(\mathcal{L}_{\mathrm{CE}}\) is the categorical cross-entropy loss for nowcasting.
+- \(\mathcal{L}_{\mathrm{BCE},h}\) is the binary cross-entropy loss for forecast horizon \(h\).
+- \(H=\{1,3,6,12,24\}\) represents the forecast horizons in hours.
+- \(w_h\) weights the contribution of each forecasting horizon.
+- \(\alpha\) and \(\beta\) control the relative importance of the two tasks.
+
+### 4.1 Class Imbalance
+
+Major solar flares are relatively rare compared with quiet periods. Class imbalance can therefore make ordinary accuracy misleading.
+
+Possible mitigation strategies include:
+
+- Class-weighted cross-entropy.
+- Positive-class weighting for binary cross-entropy.
+- Threshold selection using validation data.
+- Event-aware sampling where appropriate.
+
+Any resampling strategy must preserve chronological separation between training, validation, and test data.
+
+### 4.2 Temporal Data Splitting
+
+The proposed evaluation strategy uses chronological partitions:
+
+- Training: earliest 70% of the timeline.
+- Validation: subsequent 15%.
+- Testing: latest 15%.
+
+Preprocessing parameters, feature-selection decisions, and model hyperparameters must be determined without using the held-out test period.
+
+Sliding windows that cross partition boundaries require careful handling to prevent leakage. Where forecast labels span future intervals, boundary samples should be excluded or assigned according to a clearly documented policy.
+
+## 5. Evaluation Metrics
+
+Model performance is assessed using metrics suited to rare-event detection and probabilistic forecasting.
+
+### 5.1 True Skill Statistic
+
+\[
+\mathrm{TSS}=
+\frac{TP}{TP+FN}
+-
+\frac{FP}{FP+TN}
+\]
+
+TSS measures the difference between the probability of detection and the false-positive rate. A value of 1 represents perfect classification, while 0 indicates no discriminatory skill under this metric.
+
+### 5.2 Heidke Skill Score
+
+The Heidke Skill Score (HSS) evaluates categorical forecasts relative to expected performance from random forecasts with the same marginal frequencies.
+
+### 5.3 Probability of Detection
+
+\[
+\mathrm{POD}=\frac{TP}{TP+FN}
+\]
+
+POD measures the proportion of observed positive events that the model correctly detects.
+
+### 5.4 Precision
+
+\[
+\mathrm{Precision}=\frac{TP}{TP+FP}
+\]
+
+Precision measures the proportion of predicted positive events that are genuine positive events.
+
+### 5.5 False Alarm Ratio
+
+\[
+\mathrm{FAR}=\frac{FP}{TP+FP}
+\]
+
+FAR measures the proportion of predicted positive events that are false alarms.
+
+### 5.6 F1-Score
+
+\[
+F_1=2\cdot
+\frac{\mathrm{Precision}\cdot\mathrm{Recall}}
+{\mathrm{Precision}+\mathrm{Recall}}
+\]
+
+The F1-score balances precision and recall.
+
+### 5.7 Brier Score
+
+\[
+\mathrm{BS}=\frac{1}{N}
+\sum_{i=1}^{N}(p_i-y_i)^2
+\]
+
+The Brier Score measures the squared error of probabilistic predictions. Lower values indicate better probabilistic accuracy.
+
+Evaluation should report event-level and sample-level performance where relevant, along with confidence intervals, forecast thresholds, and the number of positive events in each evaluation partition.
 
 ## 6. Multi-Instrument Fusion Experiment
 
-A core research goal is verifying whether fusing SoLEXS and HEL1OS provides superior skill compared to either instrument alone:
+An important research objective is to determine whether combining SoLEXS and HEL1OS observations improves predictive performance compared with using either instrument independently.
 
-| Configuration | TSS | HSS | POD (Recall) | Precision | F1-Score | FAR (False Alarms) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **SoLEXS Only** (1–30 keV) | 0.621 | 0.548 | 0.692 | 0.635 | 0.662 | 0.171 |
-| **HEL1OS Only** (10–150 keV) | 0.658 | 0.590 | 0.725 | 0.672 | 0.697 | 0.152 |
-| **SoLEXS + HEL1OS Fusion** | **0.765** | **0.702** | **0.812** | **0.738** | **0.773** | **0.108** |
+The proposed experiment evaluates three configurations:
 
-*Note: In DEMO MODE, benchmark metrics are derived from reproducible chronological validation splits on synthetic physical data.*
+1. SoLEXS-only input.
+2. HEL1OS-only input.
+3. Combined SoLEXS and HEL1OS input.
 
----
+The configurations should use comparable chronological partitions, target definitions, training procedures, and evaluation metrics.
 
-## 7. Installation & Quick Start
+### Illustrative Demonstration Results
 
-### Prerequisites
-- Python 3.11+ or 3.13
-- Node.js v18+ and npm
+The following values are illustrative demonstration metrics and are not established scientific findings.
 
-### Backend Setup (FastAPI)
+| Configuration | TSS | HSS | POD | Precision | F1-Score | FAR |
+|---|---:|---:|---:|---:|---:|---:|
+| SoLEXS Only | 0.621 | 0.548 | 0.692 | 0.635 | 0.662 | 0.171 |
+| HEL1OS Only | 0.658 | 0.590 | 0.725 | 0.672 | 0.697 | 0.152 |
+| SoLEXS + HEL1OS | 0.765 | 0.702 | 0.812 | 0.738 | 0.773 | 0.108 |
 
-```bash
-cd backend
+These values are intended to demonstrate how comparative results can be presented. If they were generated using synthetic data, they must not be interpreted as measured performance on real Aditya-L1 observations.
 
-# Create virtual environment (optional)
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+Scientific claims about fusion performance require reproducible experiments on appropriately annotated observational data.
 
-# Install dependencies
-pip install -r requirements.txt
+## 7. Application Features
 
-# Run database tests
-python -m pytest tests/ -v
+The mission control dashboard provides a unified interface for data analysis and model inference.
 
-# Launch backend server on port 8000
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+### 7.1 Dashboard
 
-Interactive OpenAPI Swagger docs will be live at: [http://localhost:8000/docs](http://localhost:8000/docs)
+Displays summary statistics, recent observations, active model information, prediction results, and alert history.
 
-### Frontend Setup (React + Vite + Tailwind)
+### 7.2 Data Explorer
 
-On Windows, use `npm.cmd` to bypass PowerShell script execution restrictions:
+Supports uploading and inspecting CSV and FITS files, previewing observations, and reviewing data quality and sampling cadence.
 
-```bash
-cd frontend
+### 7.3 Data Pipeline
 
-# Install dependencies
-npm.cmd install
+Executes preprocessing, temporal alignment, feature engineering, and sequence generation.
 
-# Start Vite development server
-npm.cmd run dev
-```
+### 7.4 Model Registry
 
-Mission Control dashboard will be live at: [http://localhost:5173](http://localhost:5173)
+Lists available models, their configurations, training status, and evaluation metrics. Supports selecting a model for inference.
 
----
+### 7.5 Training and Evaluation
 
-## 8. Operating Modes
+Provides workflows for training supported models and comparing their validation and test performance.
 
-### DEMO MODE (`DATA_MODE=demo`)
-- Automatically bootstraps 10 days of synthetic 1-minute cadence SoLEXS + HEL1OS observations (14 flare events).
-- Seeds pre-trained model registry entries and initial alerts.
-- Live telemetry simulator plays back timestamps sequentially at 1×, 5×, 10×, or 50× speed.
+### 7.6 Live Monitor
 
-### REAL MODE (`DATA_MODE=real`)
-- Users can upload official CSV/FITS archives via the **Data Explorer** page.
-- Adapters in `ml/preprocessing/` clean, resample, and transform real observations without rewriting frontend code.
+Replays historical telemetry sequentially at configurable playback speeds to demonstrate streaming inference and alert generation.
 
----
+### 7.7 Alert Management
 
-## 9. Primary REST API Endpoints
+Stores generated alerts, their timestamps, associated prediction results, and acknowledgement status.
+
+Historical playback is a demonstration of the operational workflow; it does not constitute a live connection to Aditya-L1 telemetry.
+
+## 8. REST API
+
+The backend exposes REST endpoints through FastAPI.
 
 | Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Healthcheck and hardware acceleration status |
-| `GET` | `/api/dashboard/summary` | Real-time KPIs, latest telemetry, active model, and alerts |
-| `GET` | `/api/data/preview` | Preview raw observations and cadence |
-| `POST` | `/api/data/upload` | Upload user CSV/FITS observation files |
-| `POST` | `/api/preprocess` | Execute ETL, time alignment, and feature extraction |
-| `GET` | `/api/features` | Engineered rolling features and correlation matrix |
-| `GET` | `/api/models` | List all models in registry with skill scores |
-| `POST` | `/api/models/select` | Set active model for live inference |
-| `POST` | `/api/models/train` | Train classical or deep sequence architectures |
-| `POST` | `/api/predict` | Run nowcasting and 5-horizon forecasting on an input window |
-| `GET` | `/api/experiments/fusion` | Run multi-instrument fusion benchmark |
-| `POST` | `/api/simulation/start` | Start live sequential mission control playback |
-| `GET` | `/api/alerts` | Query active and historical space-weather alerts |
-| `PATCH` | `/api/alerts/{id}/acknowledge` | Acknowledge alert |
+|---|---|---|
+| GET | `/api/health` | Returns service health information |
+| GET | `/api/dashboard/summary` | Returns dashboard metrics and recent activity |
+| GET | `/api/data/preview` | Previews available observations |
+| POST | `/api/data/upload` | Uploads supported observation files |
+| POST | `/api/preprocess` | Executes preprocessing and feature extraction |
+| GET | `/api/features` | Returns engineered features and correlation information |
+| GET | `/api/models` | Lists registered models and their evaluation results |
+| POST | `/api/models/select` | Selects the active inference model |
+| POST | `/api/models/train` | Initiates model training |
+| POST | `/api/predict` | Generates nowcasting and multi-horizon forecast predictions |
+| GET | `/api/experiments/fusion` | Retrieves or executes the instrument-fusion experiment |
+| POST | `/api/simulation/start` | Starts historical telemetry playback |
+| GET | `/api/alerts` | Retrieves active and historical alerts |
+| PATCH | `/api/alerts/{id}/acknowledge` | Acknowledges a specified alert |
 
----
+Interactive API documentation is available at `/docs` when the backend is running.
 
-## 10. Docker Support (Optional)
+## 9. Operating Modes
 
-Run the full stack with a single command:
+### 9.1 Demonstration Mode
+
+Demonstration mode uses synthetic observations to illustrate the end-to-end application workflow.
+
+Depending on the configured implementation, it can initialize sample telemetry, demonstration alerts, and model registry entries.
+
+The simulated stream can be replayed at configurable speeds, such as 1x, 5x, 10x, and 50x.
+
+Synthetic observations and predictions are intended exclusively for demonstration and software verification.
+
+### 9.2 Real Data Mode
+
+Real data mode supports the ingestion and processing of compatible CSV and FITS observation files.
+
+The preprocessing adapters transform the input data into the representation expected by the selected model.
+
+Real-data forecasting requires verified instrument data, reliable event labels, suitable training and validation procedures, and independently evaluated models. Uploading real observations alone does not establish operational forecasting capability.
+
+## 10. Installation and Setup
+
+### Prerequisites
+
+- Python 3.11 or later.
+- Node.js 18 or later.
+- npm.
+- Git.
+- Docker and Docker Compose, if using containerized deployment.
+
+### 10.1 Run with Docker
+
+From the project root directory:
 
 ```bash
-docker-compose up --build
-```
-- Backend: `http://localhost:8000`
-- Frontend: `http://localhost:5173`
-
----
-
-## 11. Scientific Disclaimer
-
-This application is an educational and research prototype. Synthetic demonstration data simulates the physical kinematics of the Neupert effect, but should not be interpreted as operational space-weather warnings from the Indian Space Research Organisation (ISRO).
-# Aditya-L1 Solar Flare Intelligence
-
-A full-stack demonstration system for ingesting dual-channel solar X-ray
-telemetry (SoLEXS and HEL1OS), preparing it for modelling, training baseline
-or deep models, and serving nowcast and forecast results through a mission
-control dashboard.
-
-## Run with Docker
-
-From this directory, run:
-
-```sh
 docker compose up --build
 ```
 
-Open `http://localhost:5173`. The API is available at
-`http://localhost:8000/docs`.
+After the services start, open:
 
-The frontend uses the same-origin `/api` route. This is proxied by Vite during
-local development and by nginx in Docker, so no frontend API URL is required
-for the standard setup.
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- Interactive API documentation: `http://localhost:8000/docs`
 
-## Local development
+The standard Docker configuration uses a same-origin `/api` route, typically handled by the configured reverse proxy.
 
-Backend:
+### 10.2 Backend Setup
 
-```sh
+Open a terminal in the project root:
+
+```bash
 cd backend
-python -m pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+
+python -m venv venv
 ```
 
-Frontend (in another terminal):
+Activate the virtual environment.
 
-```sh
+Linux or macOS:
+
+```bash
+source venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+Install the dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Run the tests:
+
+```bash
+python -m pytest tests/ -v
+```
+
+Start the development server:
+
+```bash
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+### 10.3 Frontend Setup
+
+Open a second terminal:
+
+```bash
 cd frontend
-npm ci
+npm install
 npm run dev
 ```
 
-## Demo workflow
+If the project contains a valid `package-lock.json` and uses reproducible dependency installation, `npm ci` can be used instead of `npm install`.
 
-1. Start the app. Demo data and example alerts are loaded automatically.
-2. Open **Data Pipeline** and run the full pipeline.
-3. Train a model or select one from **Models**.
-4. Use **Live Monitor** to start the simulated telemetry stream.
+On Windows PowerShell, `npm.cmd` can be used if script execution restrictions prevent running `npm`.
 
-## Verification
+The frontend development server is available at `http://localhost:5173`.
 
-```sh
-cd backend
+## 11. Demonstration Workflow
+
+1. Start the backend and frontend services, or launch the application using Docker Compose.
+2. Open the dashboard and inspect the available demonstration data.
+3. Navigate to the Data Pipeline page and execute the preprocessing workflow.
+4. Open the Models page and select an available model or train a supported model.
+5. Inspect the model evaluation results and forecasting outputs.
+6. Open the Live Monitor page and start sequential historical telemetry playback.
+7. Review generated alerts and inspect their timestamps and prediction details.
+8. Use the Data Explorer to upload and inspect compatible real observations.
+
+The exact workflow depends on the available data, model artifacts, environment configuration, and implemented application features.
+
+## 12. Testing and Verification
+
+Run the backend test suite from the backend directory:
+
+```bash
 pytest tests -q
 ```
 
-The application is a demo/research tool. Its synthetic data and model outputs
-must not be used for operational space-weather decisions.
+Testing should cover:
+
+- Data ingestion and file validation.
+- Timestamp alignment and resampling.
+- Missing-value and anomaly handling.
+- Feature engineering.
+- Temporal data-split integrity.
+- Model training and inference.
+- Forecast probability generation.
+- API request and response validation.
+- Alert persistence and acknowledgement.
+- Historical playback behavior.
+
+Tests using synthetic data should be distinguished from validation experiments using real observational data.
+
+## 13. Project Structure
+
+The following is a representative project structure. Actual filenames and directories may vary by implementation.
+
+```text
+aditya-l1-solar-flare-intelligence/
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/
+│   │   ├── services/
+│   │   └── database/
+│   ├── ml/
+│   │   ├── preprocessing/
+│   │   ├── features/
+│   │   ├── models/
+│   │   └── evaluation/
+│   ├── tests/
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.js
+├── docker-compose.yml
+├── Dockerfile
+├── README.md
+└── LICENSE
+```
+
+## 14. Research Scope and Limitations
+
+This project is a research and educational prototype designed to investigate multi-instrument solar flare prediction.
+
+Its scientific validity depends on several factors:
+
+- The quality and calibration of the input observations.
+- Reliable synchronization of the two instruments.
+- The accuracy and temporal resolution of flare event labels.
+- Prevention of temporal and preprocessing leakage.
+- Appropriate treatment of missing observations and instrument-specific limitations.
+- Independent evaluation across different time periods and solar activity conditions.
+- Calibration and uncertainty assessment of probabilistic predictions.
+- Reproducibility of training, evaluation, and model selection.
+
+The proposed fusion architecture and feature set are research hypotheses that require empirical validation. Demonstration metrics and synthetic model outputs must not be presented as operationally verified performance.
+
+## 15. Scientific Disclaimer
+
+This application is an educational and research prototype. It is not an official ISRO operational forecasting system and is not endorsed by ISRO.
+
+Synthetic data, demonstration alerts, and unvalidated model predictions must not be used for operational space-weather decisions. Predictions generated from real observations also require independent scientific validation before they can support safety-critical or operational use.
+
+## License
+
+This project is distributed under the MIT License, subject to the terms specified in the repository's `LICENSE` file.
