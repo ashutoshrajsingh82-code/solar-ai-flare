@@ -58,11 +58,35 @@ def brier_skill_score(y_true: np.ndarray, y_prob: np.ndarray, y_ref_prob) -> flo
     b_model = float(np.mean((np.asarray(y_prob, dtype=float) - y_true) ** 2))
     return float(1.0 - b_model / b_ref)
 
+def _validate_binary_inputs(y_true, y_prob, threshold):
+    y_true = np.asarray(y_true)
+    y_prob = np.asarray(y_prob, dtype=float)
+
+    if y_true.ndim != 1 or y_prob.ndim != 1:
+        raise ValueError("y_true and y_prob must be one-dimensional.")
+
+    if len(y_true) == 0 or len(y_true) != len(y_prob):
+        raise ValueError("Inputs must be non-empty and have equal lengths.")
+
+    if not np.all(np.isin(y_true, [0, 1])):
+        raise ValueError("y_true must contain only 0 and 1.")
+
+    if not np.all(np.isfinite(y_prob)):
+        raise ValueError("Probabilities must be finite.")
+
+    if np.any((y_prob < 0) | (y_prob > 1)):
+        raise ValueError("Probabilities must be between 0 and 1.")
+
+    if not np.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise ValueError("threshold must be finite and between 0 and 1.")
+
+    return y_true.astype(int), y_prob
 
 def evaluate_binary_forecast(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0.5) -> dict:
     """Full metric suite for one binary forecast horizon."""
-    y_true = np.asarray(y_true).astype(int)
-    y_prob = np.asarray(y_prob).astype(float)
+    y_true, y_prob = _validate_binary_inputs(
+        y_true, y_prob, threshold
+    )
     y_pred = (y_prob >= threshold).astype(int)
 
     counts = binary_confusion_counts(y_true, y_pred)

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./solarflare.db")
     model_dir: str = os.getenv("MODEL_DIR", "./ml/saved_models")
     sample_data_dir: str = os.getenv("SAMPLE_DATA_DIR", "./sample_data")
+    pipeline_artifact_dir: str = "./artifacts/pipeline"
     cors_origins: str = ""
 
     @field_validator("cors_origins", mode="before")

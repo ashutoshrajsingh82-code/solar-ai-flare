@@ -38,13 +38,22 @@ def _channels_for_configuration(input_configuration: str):
 
 
 def train_model(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
+    with pipeline_state.operation_lock:
+        result = _train_model_locked(req, progress_callback, stage_callback)
+        if stage_callback:
+            stage_callback("completed")
+        return result
+
+
+def _train_model_locked(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
     if not pipeline_state.is_ready_for_training():
         raise ValueError("Pipeline not ready. Run /api/preprocess before training.")
 
     channel_cols, n_channels = _channels_for_configuration(req.input_configuration)
     model_id = new_model_id(req.model_type + "_" + req.input_configuration)
     if stage_callback:
-        stage_callback("validating input")
+        stage_callback("preparing_dataset")
+        stage_callback("validating_input")
 
     if req.model_type in CLASSICAL_MODEL_TYPES:
         result = _train_classical(req, channel_cols, model_id, stage_callback)

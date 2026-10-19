@@ -15,6 +15,7 @@ class Dataset(Base):
     missing_values = Column(Integer)
     data_quality_score = Column(Float)
     channels_detected = Column(JSON)
+    source_metadata = Column(JSON, default=dict)
     uploaded_at = Column(DateTime, default=dt.datetime.utcnow)
     filepath = Column(String)
 
@@ -65,3 +66,19 @@ class InferenceRecord(Base):
     forecast = Column(JSON)
     risk = Column(String)
     input_snapshot = Column(JSON)
+
+
+class BackgroundJobRecord(Base):
+    __tablename__ = "background_jobs"
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(String(64), unique=True, nullable=False, index=True)
+    job_type = Column(String(32), nullable=False, index=True)
+    status = Column(String(24), nullable=False, index=True)
+    result = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
+    stage = Column(Text, default="", nullable=False)
+    progress = Column(JSON, default=list, nullable=False)
+    created_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)

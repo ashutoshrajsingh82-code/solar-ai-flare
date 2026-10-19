@@ -72,7 +72,9 @@ def build_windows(df: pd.DataFrame, config: WindowConfig = None) -> Tuple[np.nda
     end_timestamps = df["timestamp"].values[end_idx] if "timestamp" in df.columns else np.arange(len(starts))
 
     # drop windows containing NaNs (from unfilled large telemetry gaps)
-    valid_mask = ~np.isnan(X).any(axis=(1, 2))
+    valid_mask = ~np.isnan(X).any(axis=(1, 2)) & np.isfinite(y_forecast).all(axis=1)
+    if "state" in df.columns:
+        valid_mask &= np.isfinite(df["state"].values[end_idx])
     return X[valid_mask], y_nowcast[valid_mask], y_forecast[valid_mask], end_timestamps[valid_mask]
 
 

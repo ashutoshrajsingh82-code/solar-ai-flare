@@ -10,6 +10,7 @@ import logging
 
 from app.core.config import settings
 from app.database.db import init_db, SessionLocal
+from app.services.job_manager import training_jobs, preprocess_jobs
 from app.api import health, data, preprocess, models, predict, alerts, simulation, experiments, dashboard, system
 
 logging.basicConfig(level=logging.INFO)
@@ -38,16 +39,20 @@ for router in [health.router, data.router, preprocess.router, models.router, pre
 @app.on_event("startup")
 def on_startup():
     init_db()
-    logger.info(f"Database initialized at {settings.database_url}")
+    logger.info("Database initialized")
+    training_jobs.recover_interrupted()
+    preprocess_jobs.recover_interrupted()
 
     # DEMO MODE bootstrap: auto-load synthetic data + seed alerts so the app is usable immediately.
     if settings.data_mode == "demo":
         try:
             db = SessionLocal()
             from app.services import data_service
-            data_service.load_demo_data(db)
-            db.close()
-            logger.info("Demo dataset loaded and demo alerts seeded.")
+            try:
+                data_service.load_demo_data(db)
+            finally:
+                db.close()
+            logger.info("Demo dataset loaded.")
         except Exception as e:
             logger.warning(f"Demo bootstrap failed (app will still run, load data manually): {e}")
 

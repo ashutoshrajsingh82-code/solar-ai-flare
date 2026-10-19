@@ -30,13 +30,38 @@ CADENCE_SECONDS_MAP = {
 }
 
 
-def run_full_pipeline(req: PreprocessRequest) -> dict:
+def run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
+    # PipelineState is process-local; serialize writers/readers that consume it.
+    with pipeline_state.operation_lock:
+        return _run_full_pipeline(req, stage_callback)
+
+
+def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
     if pipeline_state.raw_df is None:
         raise ValueError(
             "No dataset loaded. Load demo data or upload a dataset first."
         )
 
+    required_flux = {"timestamp", "solexs_flux", "helios_flux"}
+    if not required_flux.issubset(pipeline_state.raw_df.columns):
+        source = pipeline_state.dataset_meta.get("source", "unknown")
+        raise ValueError(
+            f"The loaded {source} observations do not match the existing dual-flux pipeline contract. "
+            "Raw SoLEXS/HEL1OS counts cannot be relabeled as flux; verified instrument adapters and reference flare labels are required."
+        )
+
+    if "state" not in pipeline_state.raw_df.columns or pipeline_state.raw_df["state"].isna().any():
+        raise ValueError(
+            "Training labels are missing or unknown. Provide verified reference labels and their provenance; "
+            "unlabeled observations must not be treated as quiet intervals."
+        )
+
+    def report_stage(stage):
+        if stage_callback:
+            stage_callback(stage)
+
     # --- Cleaning ---
+    report_stage("cleaning")
     t0 = time.time()
 
     cleaning_cfg = CleaningConfig(
@@ -56,6 +81,7 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
     )
 
     # --- Alignment / resampling ---
+    report_stage("alignment")
     t0 = time.time()
 
     align_cfg = AlignmentConfig(
@@ -85,6 +111,7 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
     pipeline_state.test_df = test_df
 
     # --- Transform: fit scaler on TRAIN only ---
+    report_stage("transforming")
     t0 = time.time()
 
     transformer = FluxTransformer(
@@ -127,6 +154,7 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
     )
 
     # --- Feature engineering ---
+    report_stage("feature_engineering")
     t0 = time.time()
 
     feat_cfg = FeatureConfig(
@@ -158,6 +186,7 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
     )
 
     # --- Label generation ---
+    report_stage("labeling")
     t0 = time.time()
 
     label_cfg = LabelConfig(
@@ -165,13 +194,9 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
         preflare_minutes=req.preflare_minutes,
     )
 
-    labeled_df = apply_preflare_window(
+    labeled_df, boundary_purged = generate_split_scoped_labels(
         featured_df,
-        label_cfg,
-    )
-
-    labeled_df = generate_forecast_labels(
-        labeled_df,
+        {"train": train_df, "validation": val_df, "test": test_df},
         label_cfg,
     )
 
@@ -227,6 +252,7 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
         ),
         "positive_counts_by_split": positive_counts_by_split,
         "positive_totals": positive_totals,
+        "boundary_purged_rows_by_split_and_horizon": boundary_purged,
         "warnings": [],
     }
 
@@ -236,6 +262,11 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
         label_report,
         time.time() - t0,
     )
+
+    # Persist the complete split and transformer snapshot after a successful run.
+    report_stage("persisting_artifacts")
+    pipeline_state.persist(include_frames=False)
+    report_stage("completed")
 
     return {
         "status": "complete",
@@ -266,8 +297,46 @@ def run_full_pipeline(req: PreprocessRequest) -> dict:
             else None
         ),
         "note": (
-            "Chronological split (earliest 70% train / next 15% "
-            "validation / latest 15% test) prevents future information "
-            "leaking into training. Scaler fit on train split only."
+            "Chronological split (earliest 70% train / next 15% validation / latest 15% test); "
+            "forecast labels are generated within each split and horizon tails are purged. "
+            "Scaler fit on train split only."
         ),
     }
+
+
+def generate_split_scoped_labels(featured_df, split_dataframes, label_cfg):
+    """Generate event labels within each chronological split and purge unknown tails.
+
+    An event in validation/test cannot create a positive training label. Rows
+    whose forecast horizon extends past their split boundary are marked NaN so
+    model training drops them instead of treating an unobserved future as quiet.
+    """
+    output = featured_df.copy().reset_index(drop=True)
+    horizons = list(label_cfg.horizons_hours)
+    columns = [f"forecast_{h}h" for h in horizons]
+    output[columns] = float("nan")
+    purged = {}
+
+    for split_name, split_df in split_dataframes.items():
+        timestamps = set(split_df["timestamp"].tolist())
+        indices = output.index[output["timestamp"].isin(timestamps)].tolist()
+        split_part = output.loc[indices].copy().reset_index(drop=True)
+        if split_part.empty:
+            purged[split_name] = {column: 0 for column in columns}
+            continue
+        split_part = apply_preflare_window(split_part, label_cfg)
+        split_part = generate_forecast_labels(split_part, label_cfg)
+        for column in columns:
+            output.loc[indices, column] = split_part[column].to_numpy()
+        output.loc[indices, "state"] = split_part["state"].to_numpy()
+
+        split_purged = {}
+        for horizon, column in zip(horizons, columns):
+            steps = int(horizon * 3600 / label_cfg.cadence_seconds)
+            n_purge = min(steps, len(indices))
+            if n_purge:
+                output.loc[indices[-n_purge:], column] = float("nan")
+            split_purged[column] = n_purge
+        purged[split_name] = split_purged
+
+    return output, purged

@@ -1,21 +1,30 @@
+import logging
+import traceback
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from app.schemas.schemas import PreprocessRequest
 from app.services import preprocess_service
 from app.services.pipeline_state import pipeline_state
 from app.services.job_manager import preprocess_jobs
+from app.core.config import settings
 
 router = APIRouter(prefix="/api", tags=["preprocess"])
+logger = logging.getLogger("solar-flare-ai")
 
 
 def _run_preprocess_job(job_id: str, req: PreprocessRequest):
     """Runs in a background thread after the POST /preprocess response is sent."""
     preprocess_jobs.set_running(job_id)
     try:
-        result = preprocess_service.run_full_pipeline(req)
+        result = preprocess_service.run_full_pipeline(
+            req,
+            stage_callback=lambda stage: preprocess_jobs.set_stage(job_id, stage),
+        )
         preprocess_jobs.set_done(job_id, result)
     except ValueError as e:
         preprocess_jobs.set_failed(job_id, str(e))
     except Exception as e:
+        logger.error("Preprocessing job %s crashed:\n%s", job_id, traceback.format_exc())
         preprocess_jobs.set_failed(job_id, f"Preprocessing failed: {e}")
 
 
@@ -29,7 +38,9 @@ def run_preprocess(req: PreprocessRequest, background_tasks: BackgroundTasks):
     especially with compute_stl enabled -- that used to blow past the
     frontend's 120s axios timeout."""
     if pipeline_state.raw_df is None:
-        raise HTTPException(status_code=422, detail="No dataset loaded. Load demo data or upload a dataset first.")
+        detail = "No dataset loaded. Upload a local real-data product; real mode does not fall back to demo data." \
+            if settings.data_mode == "real" else "No dataset loaded. Load demo data or upload a dataset first."
+        raise HTTPException(status_code=422, detail=detail)
     job_id = preprocess_jobs.create()
     background_tasks.add_task(_run_preprocess_job, job_id, req)
     return {"job_id": job_id, "status": "pending"}

@@ -1,95 +1,240 @@
-"""
-Simple in-memory job registry for long-running background tasks (e.g. model
-training). Matches the existing single-process, in-memory pattern already
-used by PipelineState in this prototype -- this is not a distributed job
-queue, just enough to let an HTTP request return immediately while the real
-work continues in a background thread, with a job_id the frontend can poll.
-
-Note: jobs live only in this process's memory. If the process restarts
-(e.g. a Render free-tier spin-down), any jobs in flight are lost and the
-frontend's poll will start getting 404s for that job_id -- which the
-frontend should treat as "failed, please retry."
-"""
+"""SQL-backed job history for the existing single-process thread workers."""
+import datetime as dt
+import logging
+import math
+import re
 import threading
-import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import pandas as pd
+
+from app.database.db import SessionLocal
+from app.database.models import BackgroundJobRecord
+
+logger = logging.getLogger("solar-flare-ai")
+
+
+def _json_safe(value: Any):
+    if value is pd.NA or value is pd.NaT:
+        return None
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, (float, np.floating)):
+        return float(value) if math.isfinite(float(value)) else None
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, np.ndarray):
+        return _json_safe(value.tolist())
+    if isinstance(value, (dt.datetime, dt.date, pd.Timestamp)):
+        return value.isoformat()
+    if isinstance(value, np.datetime64):
+        timestamp = pd.Timestamp(value)
+        return None if pd.isna(timestamp) else timestamp.isoformat()
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    if pd.isna(value):
+        return None
+    raise TypeError(f"Job value of type {type(value).__name__} is not JSON serializable")
+
+
+def _utc_now():
+    return dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+
+
+def _public_error(value):
+    if not value:
+        return value
+    value = re.sub(r"[A-Za-z]:\\[^\s\"']+", "[path]", str(value))
+    value = re.sub(r"(?<!:)\/(?:[^\s/]+\/)+[^\s/]*", "[path]", value)
+    value = re.sub(r"(?:sqlite|postgres(?:ql)?|mysql)://[^\s]+", "[database-url]", value, flags=re.I)
+    return value
+
+
+def _epoch(value):
+    if value is None:
+        return None
+    return value.replace(tzinfo=dt.timezone.utc).timestamp()
 
 
 class Job:
-    def __init__(self, job_id: str):
+    def __init__(self, job_id: str, status="pending", result=None, error=None, stage="", progress=None,
+                 created_at=None, updated_at=None, started_at=None, finished_at=None):
         self.job_id = job_id
-        self.status = "pending"  # pending | running | done | failed
-        self.result: Optional[dict] = None
-        self.error: Optional[str] = None
-        # Live progress (e.g. per-epoch training records) so the frontend can
-        # render the loss curve while the job is still running.
-        self.stage: str = ""
-        self.progress: List[dict] = []
-        self.created_at = time.time()
-        self.updated_at = self.created_at
+        self.status = status
+        self.result = result
+        self.error = error
+        self.stage = stage or ""
+        self.progress: List[dict] = progress or []
+        now = dt.datetime.now(dt.timezone.utc).timestamp()
+        self.created_at = created_at if created_at is not None else now
+        self.updated_at = updated_at if updated_at is not None else self.created_at
+        self.started_at = started_at
+        self.finished_at = finished_at
 
 
 class JobManager:
-    def __init__(self):
+    def __init__(self, job_type: str = "generic", session_factory=None):
+        self.job_type = job_type
+        self._session_factory = session_factory or SessionLocal
         self._jobs: Dict[str, Job] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+
+    def _to_job(self, rec):
+        return Job(rec.job_id, rec.status, rec.result, rec.error, rec.stage, rec.progress or [],
+                   _epoch(rec.created_at), _epoch(rec.updated_at), _epoch(rec.started_at), _epoch(rec.finished_at))
+
+    def _db_update(self, job_id: str, update):
+        db = self._session_factory()
+        try:
+            rec = db.query(BackgroundJobRecord).filter_by(job_id=job_id, job_type=self.job_type).with_for_update().one_or_none()
+            if rec is None:
+                raise KeyError(f"{self.job_type} job {job_id} not found")
+            update(rec)
+            rec.updated_at = _utc_now()
+            db.commit()
+            db.refresh(rec)
+            return rec
+        except Exception:
+            db.rollback()
+            logger.exception("Could not persist %s job %s update", self.job_type, job_id)
+            raise
+        finally:
+            db.close()
 
     def create(self) -> str:
-        job_id = uuid.uuid4().hex[:12]
         with self._lock:
-            self._jobs[job_id] = Job(job_id)
-        return job_id
+            db = self._session_factory()
+            try:
+                for _ in range(5):
+                    job_id = uuid.uuid4().hex
+                    if db.query(BackgroundJobRecord.id).filter_by(job_id=job_id).first() is None:
+                        break
+                else:
+                    raise RuntimeError("Could not allocate a unique background job ID")
+                now = _utc_now()
+                rec = BackgroundJobRecord(job_id=job_id, job_type=self.job_type, status="pending", stage="",
+                                          progress=[], created_at=now, updated_at=now)
+                db.add(rec)
+                db.commit()
+                db.refresh(rec)
+                self._jobs[job_id] = self._to_job(rec)
+                logger.info("Created %s job %s", self.job_type, job_id)
+                return job_id
+            except Exception:
+                db.rollback()
+                logger.exception("Could not persist creation of %s job", self.job_type)
+                raise
+            finally:
+                db.close()
+
+    def _update(self, job_id: str, **kwargs):
+        with self._lock:
+            safe = _json_safe(kwargs)
+            now = _utc_now()
+            def apply(rec):
+                for key, value in safe.items():
+                    setattr(rec, key, value)
+                if safe.get("status") in {"done", "failed"}:
+                    rec.finished_at = now
+                if safe.get("status") == "running" and rec.started_at is None:
+                    rec.started_at = now
+            rec = self._db_update(job_id, apply)
+            if rec is not None:
+                self._jobs[job_id] = self._to_job(rec)
+                if "status" in safe:
+                    logger.info("%s job %s status changed to %s", self.job_type, job_id, safe["status"])
+                if "stage" in safe:
+                    logger.info("%s job %s entered stage %s", self.job_type, job_id, safe["stage"])
+            return rec
 
     def set_running(self, job_id: str):
         self._update(job_id, status="running")
 
     def set_done(self, job_id: str, result: dict):
-        self._update(job_id, status="done", result=result)
+        self._update(job_id, status="done", result=_json_safe(result), error=None)
 
     def set_failed(self, job_id: str, error: str):
-        self._update(job_id, status="failed", error=error)
+        self._update(job_id, status="failed", error=str(error))
 
     def set_stage(self, job_id: str, stage: str):
-        self._update(job_id, stage=stage)
+        self._update(job_id, stage=str(stage))
 
     def add_progress(self, job_id: str, record: dict):
         with self._lock:
-            job = self._jobs.get(job_id)
-            if not job:
-                return
-            job.progress.append(record)
-            job.updated_at = time.time()
-
-    def _update(self, job_id: str, **kwargs):
-        with self._lock:
-            job = self._jobs.get(job_id)
-            if not job:
-                return
-            for k, v in kwargs.items():
-                setattr(job, k, v)
-            job.updated_at = time.time()
+            safe = _json_safe(record)
+            def apply(rec):
+                rec.progress = list(rec.progress or []) + [safe]
+            result = self._db_update(job_id, apply)
+            if result is not None:
+                self._jobs[job_id] = self._to_job(result)
+                logger.debug("Persisted progress for %s job %s", self.job_type, job_id)
 
     def get(self, job_id: str) -> Optional[Job]:
-        with self._lock:
-            return self._jobs.get(job_id)
+        db = self._session_factory()
+        try:
+            rec = db.query(BackgroundJobRecord).filter_by(job_id=job_id, job_type=self.job_type).one_or_none()
+            if rec is None:
+                with self._lock:
+                    self._jobs.pop(job_id, None)
+                return None
+            job = self._to_job(rec)
+            with self._lock:
+                self._jobs[job_id] = job
+            return job
+        except Exception:
+            db.rollback()
+            logger.exception("Could not retrieve %s job %s", self.job_type, job_id)
+            raise
+        finally:
+            db.close()
 
     def to_dict(self, job_id: str) -> Optional[dict]:
         job = self.get(job_id)
         if not job:
             return None
         return {
-            "job_id": job.job_id,
-            "status": job.status,
-            "result": job.result,
-            "error": job.error,
-            "stage": job.stage,
-            "progress": list(job.progress),
-            "created_at": job.created_at,
-            "updated_at": job.updated_at,
+            "job_id": job.job_id, "status": job.status, "result": job.result,
+            "error": _public_error(job.error), "stage": job.stage, "progress": list(job.progress),
+            "created_at": job.created_at, "updated_at": job.updated_at,
+            "started_at": job.started_at, "finished_at": job.finished_at,
         }
 
+    def recover_interrupted(self):
+        """Fail pending/running jobs after restart; computation is not resumed."""
+        db = self._session_factory()
+        now = _utc_now()
+        try:
+            records = db.query(BackgroundJobRecord).filter(
+                BackgroundJobRecord.job_type == self.job_type,
+                BackgroundJobRecord.status.in_(["pending", "running"]),
+            ).all()
+            for rec in records:
+                old_status = rec.status
+                rec.status = "failed"
+                rec.error = f"Process restarted before {self.job_type} job completed (was {old_status}); computation was not resumed."
+                rec.stage = "interrupted"
+                rec.finished_at = now
+                rec.updated_at = now
+            db.commit()
+            with self._lock:
+                for rec in records:
+                    self._jobs[rec.job_id] = self._to_job(rec)
+            if records:
+                logger.warning("Recovered %d interrupted %s jobs", len(records), self.job_type)
+            return len(records)
+        except Exception:
+            db.rollback()
+            logger.exception("Could not recover interrupted %s jobs", self.job_type)
+            raise
+        finally:
+            db.close()
 
-# Module-level singletons -- mirrors how pipeline_state is used elsewhere.
-training_jobs = JobManager()
-preprocess_jobs = JobManager()
+
+training_jobs = JobManager("training")
+preprocess_jobs = JobManager("preprocessing")
