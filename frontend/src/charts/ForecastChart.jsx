@@ -11,15 +11,15 @@ import {
 } from 'recharts';
 import RiskBadge from '../components/RiskBadge';
 
-export default function ForecastChart({
-  forecast = { '1h': 0.74, '3h': 0.68, '6h': 0.55, '12h': 0.39, '24h': 0.27 },
-  height = 200,
-}) {
+export default function ForecastChart({ forecast = {}, height = 200 }) {
   const horizons = ['1h', '3h', '6h', '12h', '24h'];
+  const available = horizons.some((h) => forecast && forecast[h] !== null && forecast[h] !== undefined && Number.isFinite(Number(forecast[h])));
+
+  if (!available) return <div className="w-full flex items-center justify-center text-sm text-slate-400" style={{ height }}>Forecast unavailable until a compatible trained model produces a prediction.</div>;
 
   const chartData = horizons.map((h) => {
-    const prob = forecast && forecast[h] !== undefined ? Number(forecast[h]) : 0;
-    const pct = prob * 100;
+    const prob = forecast && forecast[h] !== null && forecast[h] !== undefined ? Number(forecast[h]) : null;
+    const pct = prob === null ? null : prob * 100;
 
     let color = '#10b981'; // LOW
     let risk = 'LOW';

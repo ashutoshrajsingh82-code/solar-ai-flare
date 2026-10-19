@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+import logging
 from sqlalchemy.orm import Session
 
 from app.schemas.schemas import PredictRequest
@@ -6,6 +7,7 @@ from app.services import predict_service, alert_service
 from app.database.db import get_db
 
 router = APIRouter(prefix="/api", tags=["predict"])
+logger = logging.getLogger("solar-flare-ai")
 
 
 @router.post("/predict")
@@ -19,7 +21,8 @@ def predict(req: PredictRequest, db: Session = Depends(get_db)):
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+        logger.exception("Prediction failed")
+        raise HTTPException(status_code=500, detail="Prediction failed while loading or running the selected model.")
 
 
 @router.post("/predict/batch")
@@ -28,6 +31,9 @@ def predict_batch(requests: list[PredictRequest], db: Session = Depends(get_db))
     for req in requests:
         try:
             results.append(predict_service.predict_from_raw_window(req.rows, req.model_id))
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             results.append({"error": str(e)})
+        except Exception:
+            logger.exception("Batch prediction failed")
+            results.append({"error": "Prediction failed while loading or running the selected model."})
     return {"results": results}

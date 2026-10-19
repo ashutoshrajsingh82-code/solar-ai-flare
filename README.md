@@ -595,3 +595,7 @@ Synthetic data, demonstration alerts, and unvalidated model predictions must not
 ## License
 
 This project is distributed under the MIT License, subject to the terms specified in the repository's `LICENSE` file.
+
+## Phase 1 implementation notes
+
+See [PHASE1_IMPLEMENTATION.md](PHASE1_IMPLEMENTATION.md) for the local model lifecycle, artifact requirements, current verification results, legacy migration behavior, and limitations. Legacy models without confirmed checkpoint and preprocessing artifacts are treated conservatively; retrain before activation. Synthetic/demo training is labeled separately and does not constitute observational validation.

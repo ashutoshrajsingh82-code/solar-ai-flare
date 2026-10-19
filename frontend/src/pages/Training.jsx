@@ -235,27 +235,27 @@ export default function Training() {
           {training.metrics && (
             <div className="mt-5 pt-4 border-t border-space-800 grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-center">
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
-                <span className="text-[10px] text-slate-400 block font-sans">Val Mean TSS</span>
+                <span className="text-[10px] text-slate-400 block font-sans">Test Mean TSS</span>
                 <span className="text-base font-bold text-solar-400">
-                  {training.metrics.tss !== undefined ? Number(training.metrics.tss).toFixed(3) : '0.742'}
+                  {Number.isFinite(training.metrics.tss) ? Number(training.metrics.tss).toFixed(3) : 'N/A'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
-                <span className="text-[10px] text-slate-400 block font-sans">Val Mean HSS</span>
+                <span className="text-[10px] text-slate-400 block font-sans">Test Mean HSS</span>
                 <span className="text-base font-bold text-sky-400">
-                  {training.metrics.hss !== undefined ? Number(training.metrics.hss).toFixed(3) : '0.685'}
+                  {Number.isFinite(training.metrics.hss) ? Number(training.metrics.hss).toFixed(3) : 'N/A'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">Recall / POD</span>
                 <span className="text-base font-bold text-emerald-400">
-                  {training.metrics.recall !== undefined ? Number(training.metrics.recall).toFixed(3) : '0.790'}
+                  {Number.isFinite(training.metrics.recall) ? Number(training.metrics.recall).toFixed(3) : 'N/A'}
                 </span>
               </div>
               <div className="p-2.5 bg-space-950 rounded border border-space-800">
                 <span className="text-[10px] text-slate-400 block font-sans">False Alarm Rate</span>
                 <span className="text-base font-bold text-rose-400">
-                  {training.metrics.false_alarm_rate !== undefined ? Number(training.metrics.false_alarm_rate).toFixed(3) : '0.118'}
+                  {Number.isFinite(training.metrics.false_alarm_rate) ? Number(training.metrics.false_alarm_rate).toFixed(3) : 'N/A'}
                 </span>
               </div>
             </div>

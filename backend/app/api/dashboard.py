@@ -15,14 +15,10 @@ def summary(db: Session = Depends(get_db)):
     latest = sim_state.get("latest")
 
     active_model = model_service.get_active_model()
-    if not active_model:
-        all_models = model_service.list_models()
-        active_model = all_models[-1] if all_models else None
-
     recent_alerts = alert_service.list_alerts(db, limit=5)
 
-    current_state = latest["nowcast"]["state"] if latest else "quiet"
-    risk = latest.get("risk", "LOW") if latest else "LOW"
+    current_state = latest["nowcast"]["state"] if latest else None
+    risk = latest.get("risk") if latest else None
     forecast_1h = latest["forecast"].get("1h") if latest else None
     hard_soft_ratio = latest.get("hard_soft_ratio") if latest else None
 

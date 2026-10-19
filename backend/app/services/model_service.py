@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import numpy as np
 import pandas as pd
 import joblib
@@ -24,6 +25,10 @@ FORECAST_HORIZON_COLS = ["forecast_1h", "forecast_3h", "forecast_6h", "forecast_
 registry = ModelRegistry(settings.model_dir)
 
 
+def _training_status():
+    return "demo_only" if settings.data_mode == "demo" or pipeline_state.dataset_meta.get("source") == "demo" else "trained"
+
+
 def _channels_for_configuration(input_configuration: str):
     if input_configuration == "solexs_only":
         return ["solexs_flux_scaled"], 1
@@ -32,24 +37,26 @@ def _channels_for_configuration(input_configuration: str):
     return ["solexs_flux_scaled", "helios_flux_scaled"], 2
 
 
-def train_model(req: TrainRequest) -> dict:
+def train_model(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
     if not pipeline_state.is_ready_for_training():
         raise ValueError("Pipeline not ready. Run /api/preprocess before training.")
 
     channel_cols, n_channels = _channels_for_configuration(req.input_configuration)
     model_id = new_model_id(req.model_type + "_" + req.input_configuration)
+    if stage_callback:
+        stage_callback("validating input")
 
     if req.model_type in CLASSICAL_MODEL_TYPES:
-        result = _train_classical(req, channel_cols, model_id)
+        result = _train_classical(req, channel_cols, model_id, stage_callback)
     elif req.model_type in DEEP_MODEL_TYPES:
-        result = _train_deep(req, channel_cols, n_channels, model_id)
+        result = _train_deep(req, channel_cols, n_channels, model_id, progress_callback, stage_callback)
     else:
         raise ValueError(f"Unknown model_type '{req.model_type}'")
 
     return result
 
 
-def _train_classical(req: TrainRequest, channel_cols, model_id: str) -> dict:
+def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callback=None) -> dict:
     train_df = pipeline_state.train_df.copy()
     val_df = pipeline_state.val_df.copy()
     test_df = pipeline_state.test_df.copy()
@@ -83,6 +90,8 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str) -> dict:
 
     t0 = time.time()
     model = MODEL_BUILDERS[req.model_type]()
+    if stage_callback:
+        stage_callback("training")
     model.fit(X_train, y_now_train, y_fc_train, feature_names=use_cols)
     train_duration = time.time() - t0
 
@@ -90,9 +99,16 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str) -> dict:
     now_prob_test = model.predict_nowcast_proba(X_test)
     now_pred_test = np.argmax(now_prob_test, axis=1)
 
+    if stage_callback:
+        stage_callback("evaluating")
     metrics = _compute_full_metrics(y_now_test, now_pred_test, y_fc_test, fc_prob_test)
 
+    os.makedirs(settings.model_dir, exist_ok=True)
+    transformer_path = os.path.join(settings.model_dir, f"{model_id}.transformer.joblib")
+    joblib.dump(pipeline_state.transformer, transformer_path)
     checkpoint_path = os.path.join(settings.model_dir, f"{model_id}.joblib")
+    if stage_callback:
+        stage_callback("saving artifacts")
     joblib.dump({"model": model, "feature_cols": use_cols}, checkpoint_path)
 
     record = ModelRecord(
@@ -102,15 +118,17 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str) -> dict:
         training_dataset=pipeline_state.dataset_meta.get("filename", "demo"),
         input_configuration=req.input_configuration,
         metrics=metrics, checkpoint_path=checkpoint_path,
-        scaler_path="", active=False, model_kind="classical",
+        scaler_path=transformer_path, transformer_path=transformer_path, active=False, model_kind="classical",
+        status=_training_status(),
+        transformer_required=True,
         params={"n_features": len(use_cols), "train_duration_sec": round(train_duration, 3)},
     )
     registry.register(record)
 
-    return {"model_id": model_id, "metrics": metrics, "history": [], "input_configuration": req.input_configuration}
+    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": [], "input_configuration": req.input_configuration}
 
 
-def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str) -> dict:
+def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, progress_callback=None, stage_callback=None) -> dict:
     win_cfg = WindowConfig(sequence_length=req.sequence_length, channel_cols=channel_cols)
 
     X_train, y_now_train, y_fc_train, _ = build_windows(pipeline_state.train_df.merge(
@@ -129,7 +147,7 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str) -> d
     if len(X_train) < 10 or len(X_test) < 5:
         raise ValueError("Not enough windows to train (need more demo data or a shorter sequence_length).")
     if len(X_val) < 5:
-        X_val, y_now_val, y_fc_val = X_train[-max(5, len(X_train)//10):], y_now_train[-max(5, len(X_train)//10):], y_fc_train[-max(5, len(X_train)//10):]
+        raise ValueError("Not enough chronological validation windows; training cannot reuse training samples as validation data.")
 
     train_cfg = TrainConfig(
         model_type=req.model_type, sequence_length=req.sequence_length, batch_size=req.batch_size,
@@ -139,9 +157,11 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str) -> d
     )
 
     history = []
+    if stage_callback:
+        stage_callback("training")
     model, history = train_deep_model(
         X_train, y_now_train, y_fc_train, X_val, y_now_val, y_fc_val,
-        config=train_cfg, progress_callback=lambda rec: history,
+        config=train_cfg, progress_callback=progress_callback,
     )
 
     model.eval()
@@ -151,9 +171,16 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str) -> d
         fc_prob_test = torch.sigmoid(fc_logits).numpy()
     now_pred_test = np.argmax(now_prob_test, axis=1)
 
+    if stage_callback:
+        stage_callback("evaluating")
     metrics = _compute_full_metrics(y_now_test, now_pred_test, y_fc_test, fc_prob_test)
 
+    os.makedirs(settings.model_dir, exist_ok=True)
+    transformer_path = os.path.join(settings.model_dir, f"{model_id}.transformer.joblib")
+    joblib.dump(pipeline_state.transformer, transformer_path)
     checkpoint_path = os.path.join(settings.model_dir, f"{model_id}.pt")
+    if stage_callback:
+        stage_callback("saving artifacts")
     torch.save({"state_dict": model.state_dict(), "model_type": req.model_type, "n_channels": n_channels}, checkpoint_path)
 
     record = ModelRecord(
@@ -163,12 +190,14 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str) -> d
         training_dataset=pipeline_state.dataset_meta.get("filename", "demo"),
         input_configuration=req.input_configuration,
         metrics=metrics, checkpoint_path=checkpoint_path,
-        scaler_path="", active=False, model_kind="deep",
+        scaler_path=transformer_path, transformer_path=transformer_path, active=False, model_kind="deep",
+        status=_training_status(),
+        transformer_required=True,
         params={"sequence_length": req.sequence_length, "epochs": req.epochs, "n_channels": n_channels},
     )
     registry.register(record)
 
-    return {"model_id": model_id, "metrics": metrics, "history": history, "input_configuration": req.input_configuration}
+    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": history, "input_configuration": req.input_configuration}
 
 
 def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
@@ -185,6 +214,9 @@ def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
     hss_values = [m["hss"] for m in per_horizon.values()]
 
     return {
+        "evaluation_split": "chronological_test",
+        "evaluation_samples": int(len(y_now_true)),
+        "evaluation_note": "Synthetic/demo results are demonstrations, not observational validation." if _training_status() == "demo_only" else "Non-demo dataset; observational provenance has not been independently validated.",
         "nowcast_accuracy": now_acc,
         "nowcast_f1_macro": now_f1_macro,
         "nowcast_confusion_matrix": cm,
@@ -199,177 +231,48 @@ def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
         "false_alarm_rate": float(np.mean([m["false_alarm_rate"] for m in per_horizon.values()])),
         "pr_auc": float(np.mean([m["pr_auc"] for m in per_horizon.values() if m["pr_auc"] is not None])) if any(m["pr_auc"] is not None for m in per_horizon.values()) else None,
     }
+_BASELINE_SEEDS = [
+    ("climatology", "Climatology No-Skill Reference", {"predicts": "train-split class priors and flare rates"}),
+    ("flux_rule", "Flux Threshold Rule (Level + Trend)", {"max_depth": 3, "features": ["flux_level", "flux_slope_5m"]}),
+    ("hard_soft_ratio_rule", "Hard/Soft Ratio Rule (Neupert Test)", {"max_depth": 3, "features": ["log_hard_soft_ratio", "hard_soft_ratio_slope_5m"]}),
+    ("two_feature_logreg", "Flux + Trend Logistic Regression", {"features": ["flux_level", "flux_slope_5m"]}),
+    ("gradient_boosting", "Gradient Boosting (Histogram) Baseline", {"max_depth": 6, "max_iter": 200}),
+]
 
 
-def seed_initial_models():
-    """Seeds the pre-trained candidate architectures into the model registry for out-of-the-box demo functionality."""
-    if len(registry.list_all()) > 0:
+def seed_baseline_models():
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                        "ml", "baseline_seed_metrics.json")
+    if not os.path.exists(path):
+        print(f"[seed_baseline_models] metrics file not found: {path}")
         return
-
-    os.makedirs(settings.model_dir, exist_ok=True)
-    cnn_lstm_path = os.path.join(settings.model_dir, "cnn_lstm_fusion_v1.pt")
-    try:
-        from ml.models.deep_models import DEEP_MODEL_BUILDERS
-        deep_m = DEEP_MODEL_BUILDERS["cnn_lstm_fusion"](n_channels=2)
-        torch.save({"state_dict": deep_m.state_dict(), "model_type": "cnn_lstm_fusion", "n_channels": 2}, cnn_lstm_path)
-    except Exception as e:
-        pass
-
-    demo_models = [
-        ModelRecord(
-            model_id="cnn_lstm_fusion_v1",
-            name="CNN-LSTM Dual-Channel Fusion",
-            architecture="cnn_lstm_fusion",
-            version="v1.0",
-            created_at="2026-09-08 10:00:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.765, "hss": 0.702, "precision": 0.738, "recall": 0.812, "f1": 0.773,
-                "false_alarm_rate": 0.108, "pr_auc": 0.782, "brier_score": 0.082, "nowcast_accuracy": 0.885,
-                "nowcast_confusion_matrix": [
-                    [1240, 45, 12, 8],
-                    [32, 280, 24, 10],
-                    [5, 15, 195, 20],
-                    [12, 8, 18, 220]
-                ],
-                "forecast_1h": {
-                    "tss": 0.765, "hss": 0.702, "precision": 0.738, "recall": 0.812, "f1": 0.773,
-                    "false_alarm_rate": 0.108, "brier_score": 0.082
-                }
-            },
-            checkpoint_path=cnn_lstm_path,
-            active=True,
-            model_kind="deep",
-            params={"sequence_length": 30, "n_channels": 2, "n_params": 142850},
-        ),
-        ModelRecord(
-            model_id="random_forest_v1",
-            name="Random Forest Multi-Task Baseline",
-            architecture="random_forest",
-            version="v1.0",
-            created_at="2026-09-08 09:30:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.710, "hss": 0.645, "precision": 0.690, "recall": 0.755, "f1": 0.721,
-                "false_alarm_rate": 0.134, "pr_auc": 0.730, "brier_score": 0.098, "nowcast_accuracy": 0.842,
-                "forecast_1h": {"tss": 0.710, "hss": 0.645, "precision": 0.690, "recall": 0.755, "f1": 0.721, "false_alarm_rate": 0.134}
-            },
-            checkpoint_path="",
-            active=False,
+    with open(path) as f:
+        seed = json.load(f)
+    meta = seed.get("_meta", {})
+    dataset = f"{meta.get('dataset', 'benchmark')} (seed {meta.get('seed')}, {meta.get('days')} days)"
+    for arch, name, params in _BASELINE_SEEDS:
+        model_id = f"{arch}_v1"
+        if arch not in seed or registry.get(model_id):
+            continue
+        registry.register(ModelRecord(
+            model_id=model_id, name=name, architecture=arch, version="v1.0",
+            created_at=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+            training_dataset=dataset, input_configuration="fusion",
+            metrics=seed[arch], checkpoint_path="", scaler_path="", active=False,
             model_kind="classical",
-            params={"n_estimators": 200, "max_depth": 12},
-        ),
-        ModelRecord(
-            model_id="logistic_regression_v1",
-            name="Logistic Regression Linear Baseline",
-            architecture="logistic_regression",
-            version="v1.0",
-            created_at="2026-09-08 09:00:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.580, "hss": 0.510, "precision": 0.590, "recall": 0.640, "f1": 0.614,
-                "false_alarm_rate": 0.195, "pr_auc": 0.605, "brier_score": 0.145, "nowcast_accuracy": 0.760,
-                "forecast_1h": {"tss": 0.580, "hss": 0.510, "precision": 0.590, "recall": 0.640, "f1": 0.614, "false_alarm_rate": 0.195}
-            },
-            checkpoint_path="",
-            active=False,
-            model_kind="classical",
-            params={"penalty": "l2", "C": 1.0},
-        ),
-        ModelRecord(
-            model_id="cnn_1d_v1",
-            name="1D-CNN Spectro-Temporal Extractor",
-            architecture="cnn_1d",
-            version="v1.0",
-            created_at="2026-09-08 09:45:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.725, "hss": 0.660, "precision": 0.705, "recall": 0.770, "f1": 0.736,
-                "false_alarm_rate": 0.125, "pr_auc": 0.745, "brier_score": 0.092, "nowcast_accuracy": 0.856,
-                "forecast_1h": {"tss": 0.725, "hss": 0.660, "precision": 0.705, "recall": 0.770, "f1": 0.736, "false_alarm_rate": 0.125}
-            },
-            checkpoint_path="",
-            active=False,
-            model_kind="deep",
-            params={"sequence_length": 30, "n_channels": 2},
-        ),
-        ModelRecord(
-            model_id="lstm_v1",
-            name="LSTM Recurrent Sequence Model",
-            architecture="lstm",
-            version="v1.0",
-            created_at="2026-09-08 09:50:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.718, "hss": 0.652, "precision": 0.695, "recall": 0.762, "f1": 0.727,
-                "false_alarm_rate": 0.129, "pr_auc": 0.738, "brier_score": 0.095, "nowcast_accuracy": 0.850,
-                "forecast_1h": {"tss": 0.718, "hss": 0.652, "precision": 0.695, "recall": 0.762, "f1": 0.727, "false_alarm_rate": 0.129}
-            },
-            checkpoint_path="",
-            active=False,
-            model_kind="deep",
-            params={"sequence_length": 30, "n_channels": 2},
-        ),
-        ModelRecord(
-            model_id="cnn_transformer_v1",
-            name="CNN-Transformer Attention Hybrid",
-            architecture="cnn_transformer",
-            version="v1.0",
-            created_at="2026-09-08 09:55:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.752, "hss": 0.690, "precision": 0.725, "recall": 0.798, "f1": 0.760,
-                "false_alarm_rate": 0.114, "pr_auc": 0.770, "brier_score": 0.086, "nowcast_accuracy": 0.872,
-                "forecast_1h": {"tss": 0.752, "hss": 0.690, "precision": 0.725, "recall": 0.798, "f1": 0.760, "false_alarm_rate": 0.114}
-            },
-            checkpoint_path="",
-            active=False,
-            model_kind="deep",
-            params={"sequence_length": 30, "n_channels": 2},
-        ),
-        ModelRecord(
-            model_id="svm_v1",
-            name="Support Vector Machine (RBF Kernel)",
-            architecture="svm",
-            version="v1.0",
-            created_at="2026-09-08 09:15:00 UTC",
-            training_dataset="demo_aditya_l1_solexs_helios.csv",
-            input_configuration="fusion",
-            metrics={
-                "tss": 0.635, "hss": 0.565, "precision": 0.640, "recall": 0.685, "f1": 0.662,
-                "false_alarm_rate": 0.165, "pr_auc": 0.655, "brier_score": 0.125, "nowcast_accuracy": 0.795,
-                "forecast_1h": {"tss": 0.635, "hss": 0.565, "precision": 0.640, "recall": 0.685, "f1": 0.662, "false_alarm_rate": 0.165}
-            },
-            checkpoint_path="",
-            active=False,
-            model_kind="classical",
-            params={"kernel": "rbf", "C": 1.0},
-        ),
-    ]
-
-    for rec in demo_models:
-        registry.register(rec)
+            params={**params, "reference_only": True, "benchmark": meta},
+        ))
+def seed_initial_models():
+    """Compatibility shim: architectures are not seeded as trained records."""
+    return
 
 
 def list_models():
-    models = registry.list_all()
-    if not models:
-        seed_initial_models()
-        models = registry.list_all()
-    return models
+    return registry.list_all()
 
 
 def get_model_metrics(model_id: str):
     rec = registry.get(model_id)
-    if not rec:
-        seed_initial_models()
-        rec = registry.get(model_id)
     if not rec:
         raise KeyError(f"Model {model_id} not found")
     return rec
@@ -381,11 +284,7 @@ def set_active_model(model_id: str):
 
 
 def get_active_model():
-    active = registry.get_active()
-    if not active:
-        seed_initial_models()
-        active = registry.get_active()
-    return active
+    return registry.get_active()
 
 
 def run_fusion_experiment(base_req: TrainRequest) -> dict:

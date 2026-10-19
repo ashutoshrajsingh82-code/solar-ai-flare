@@ -98,16 +98,10 @@ export default function LiveMonitor() {
   const latest = simState?.latest || {};
   const history = simState?.recent_history || [];
 
-  const nowcastState = latest.nowcast?.state || 'quiet';
+  const nowcastState = latest.nowcast?.state || 'N/A';
   const nowcastConf = latest.nowcast?.confidence;
-  const riskLevel = latest.risk || 'LOW';
-  const forecastHorizons = latest.forecast || {
-    '1h': 0.15,
-    '3h': 0.12,
-    '6h': 0.08,
-    '12h': 0.04,
-    '24h': 0.02,
-  };
+  const riskLevel = latest.risk || 'N/A';
+  const forecastHorizons = latest.forecast || {};
 
   return (
     <div className="space-y-6">
@@ -275,10 +269,10 @@ export default function LiveMonitor() {
 
       {/* Telemetry & Quality Summary */}
       <DataQualityCard
-        qualityScore={latest.data_quality || 0.98}
+        qualityScore={latest.data_quality}
         cadence="60s"
-        totalRows={simState?.total_rows || 14400}
-        missingCount={12}
+        totalRows={simState?.total_rows || 0}
+        missingCount={latest.missing_count}
       />
     </div>
   );

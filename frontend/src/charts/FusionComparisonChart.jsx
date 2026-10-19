@@ -36,9 +36,9 @@ export default function FusionComparisonChart({
 
   const chartData = metricsKeys.map(({ key, label }) => ({
     metric: label,
-    solexs: Number(solexs[key] ?? 0),
-    helios: Number(helios[key] ?? 0),
-    fused: Number(fused[key] ?? 0),
+    solexs: Number.isFinite(solexs[key]) ? solexs[key] : null,
+    helios: Number.isFinite(helios[key]) ? helios[key] : null,
+    fused: Number.isFinite(fused[key]) ? fused[key] : null,
   }));
 
   const CustomTooltip = ({ active, payload, label }) => {

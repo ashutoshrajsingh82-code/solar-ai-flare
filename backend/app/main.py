@@ -24,7 +24,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,9 +44,8 @@ def on_startup():
     if settings.data_mode == "demo":
         try:
             db = SessionLocal()
-            from app.services import data_service, alert_service
+            from app.services import data_service
             data_service.load_demo_data(db)
-            alert_service.seed_demo_alerts(db)
             db.close()
             logger.info("Demo dataset loaded and demo alerts seeded.")
         except Exception as e:

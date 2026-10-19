@@ -66,21 +66,15 @@ export default function Overview() {
     }
   };
 
-  const currentState = summary?.current_state || 'pre_flare';
-  const riskLevel = summary?.risk_level || 'HIGH';
+  const currentState = summary?.current_state || 'N/A';
+  const riskLevel = summary?.risk_level || 'N/A';
   const forecast1h = summary?.forecast_1h !== null && summary?.forecast_1h !== undefined
     ? `${(summary.forecast_1h * 100).toFixed(0)}%`
-    : '78%';
-  const activeModel = summary?.active_model || 'CNN-LSTM Fusion (Dual-Channel)';
-  const systemStatus = summary?.system_status || 'MONITORING';
+    : 'N/A';
+  const activeModel = summary?.active_model || 'None';
+  const systemStatus = summary?.system_status || 'IDLE';
   const latestInference = summary?.latest_inference || {};
-  const forecastHorizons = latestInference.forecast || {
-    '1h': 0.78,
-    '3h': 0.71,
-    '6h': 0.59,
-    '12h': 0.41,
-    '24h': 0.30,
-  };
+  const forecastHorizons = latestInference?.forecast || {};
 
   return (
     <div className="space-y-6">

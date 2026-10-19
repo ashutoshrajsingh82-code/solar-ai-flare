@@ -16,7 +16,7 @@ import api from '../services/api';
 
 export default function Models() {
   const [models, setModels] = useState([]);
-  const [activeModelId, setActiveModelId] = useState('cnn_lstm_fusion_v1');
+  const [activeModelId, setActiveModelId] = useState('');
   const [selectedModel, setSelectedModel] = useState(null);
   const [notification, setNotification] = useState('');
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,7 @@ export default function Models() {
 
         <div className="flex items-center gap-2 font-mono text-xs bg-space-950 px-3 py-1.5 rounded-lg border border-space-800">
           <span className="text-slate-400">Active Engine:</span>
-          <span className="text-solar-400 font-bold">{activeModelId}</span>
+          <span className="text-solar-400 font-bold">{activeModelId || 'None'}</span>
         </div>
       </div>
 
@@ -101,6 +101,7 @@ export default function Models() {
           {notification}
         </div>
       )}
+      {!loading && models.length === 0 && <div className="panel p-5 text-sm text-slate-400">No trained models are registered. Run preprocessing and train a model before activation or prediction.</div>}
 
       {/* Candidate Deep Architecture Topology Banner */}
       <div className="panel p-6 bg-gradient-to-r from-space-900 via-space-850 to-space-900 border-space-750">

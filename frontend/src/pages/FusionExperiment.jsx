@@ -43,13 +43,9 @@ export default function FusionExperiment() {
     }
   };
 
-  const results = experimentData?.results || {
-    solexs_only: { tss: 0.621, hss: 0.548, precision: 0.635, recall: 0.692, f1: 0.662, false_alarm_rate: 0.171, pr_auc: 0.640 },
-    helios_only: { tss: 0.658, hss: 0.590, precision: 0.672, recall: 0.725, f1: 0.697, false_alarm_rate: 0.152, pr_auc: 0.685 },
-    fused: { tss: 0.765, hss: 0.702, precision: 0.738, recall: 0.812, f1: 0.773, false_alarm_rate: 0.108, pr_auc: 0.782 },
-  };
+  const results = experimentData?.results || {};
 
-  const bestConfig = experimentData?.best_configuration || 'fused';
+  const bestConfig = experimentData?.best_configuration;
 
   return (
     <div className="space-y-6">
@@ -102,21 +98,21 @@ export default function FusionExperiment() {
         </div>
       </div>
 
-      {/* Demonstration Results Disclaimer Banner */}
+      {/* Data provenance notice */}
       <div className="p-3.5 rounded-xl bg-space-900/80 border border-space-750 text-xs text-slate-400 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AlertTriangle size={15} className="text-solar-400" />
           <span>
-            <strong>Scientific Methodology Disclaimer:</strong> Demonstration results — derived from reproducible chronological validation splits on synthetic demo data simulating Neupert kinematics. Replace with official ISRO Level-2 archive files once released.
+            <strong>Data provenance:</strong> {experimentData?.label || 'Run an experiment to create results. Synthetic/demo results are not observational validation.'}
           </span>
         </div>
         <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-          Validation: Chronological (No Leakage)
+          {bestConfig ? 'Chronological test split' : 'No completed results'}
         </span>
       </div>
 
       {/* Best Configuration Callout Card */}
-      <div className="panel p-4 bg-space-900 border-space-750 flex items-center justify-between">
+      {bestConfig && <div className="panel p-4 bg-space-900 border-space-750 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
             <Award size={22} />
@@ -126,7 +122,7 @@ export default function FusionExperiment() {
               Empirical Conclusion
             </span>
             <h4 className="text-base font-bold text-white tracking-tight">
-              Best Performing Configuration:{' '}
+              Highest recorded score (not scientific validation):{' '}
               <span className="text-emerald-400 uppercase font-mono">{bestConfig.replace('_', ' + ')}</span>
             </h4>
           </div>
@@ -138,7 +134,7 @@ export default function FusionExperiment() {
             +{((results.fused?.tss - Math.max(results.solexs_only?.tss, results.helios_only?.tss)) * 100).toFixed(1)}% TSS Improvement
           </span>
         </div>
-      </div>
+      </div>}
 
       {/* Main Comparison Chart */}
       <div className="panel p-5">

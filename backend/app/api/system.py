@@ -14,9 +14,8 @@ _start_time = time.time()
 @router.get("/status")
 def system_status():
     active = model_service.get_active_model()
-    all_models = model_service.list_models()
     sim = live_simulator.get_state()
-    active_model_id = active["model_id"] if active else (all_models[-1]["model_id"] if all_models else None)
+    active_model_id = active["model_id"] if active else None
 
     t0 = time.time()
     _ = 1 + 1

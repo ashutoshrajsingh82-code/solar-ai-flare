@@ -30,7 +30,7 @@ export default function ModelCard({
   onSelect = () => {},
   onInspect = () => {},
 }) {
-  const metrics = model.metrics || {};
+  const metrics = model.status === 'untrained' ? {} : (model.metrics || {});
   const forecast1h = metrics.forecast_1h || {};
   // No made-up fallbacks: a metric that was not computed shows as an em dash.
   const tss = forecast1h.tss ?? metrics.tss ?? null;
@@ -87,6 +87,9 @@ export default function ModelCard({
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-300 border border-space-700">
             Input: {model.input_configuration || 'SoLEXS + HEL1OS (Fused)'}
           </span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-300 border border-space-700">
+            {model.status || 'untrained'}
+          </span>
           {model.parameters_count && (
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-400">
               {Number(model.parameters_count).toLocaleString()} params
@@ -138,7 +141,7 @@ export default function ModelCard({
           >
             Train to Deploy
           </Link>
-        ) : !isActive ? (
+        ) : !isActive && model.status !== 'untrained' ? (
           <button
             onClick={() => onSelect(model.model_id)}
             className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-space-800 hover:bg-solar-500 hover:text-space-950 text-slate-200 border border-space-700 transition-all"
