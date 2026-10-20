@@ -599,3 +599,19 @@ This project is distributed under the MIT License, subject to the terms specifie
 ## Phase 1 implementation notes
 
 See [PHASE1_IMPLEMENTATION.md](PHASE1_IMPLEMENTATION.md) for the local model lifecycle, artifact requirements, current verification results, legacy migration behavior, and limitations. Legacy models without confirmed checkpoint and preprocessing artifacts are treated conservatively; retrain before activation. Synthetic/demo training is labeled separately and does not constitute observational validation.
+
+## Phase 2 persistence notes
+
+Background job status, progress, results, and failures are stored in the configured SQLAlchemy database (`DATABASE_URL`). Existing SQLite databases gain the `background_jobs` table through the non-destructive `create_all()` initialization; existing tables and records are not dropped. Jobs still execute on process-local threads. On startup, pending/running records are marked failed as interrupted; their computation is not resumed.
+
+Pipeline DataFrames and fitted preprocessing transformers are stored below `PIPELINE_ARTIFACT_DIR` (default `backend/artifacts/pipeline`) with a versioned JSON manifest, atomic replacement, and SHA-256 verification. Parquet is preferred. If `pyarrow` or `fastparquet` is unavailable, DataFrames use CSV; timestamps are parsed on restoration. The transformer uses the project's existing joblib serialization and is loaded only from the configured local artifact directory after integrity verification. Generated artifacts are ignored by Git.
+
+Local artifacts survive a process restart only while the same disk is retained. Container replacement or ephemeral-host redeployment requires a persistent volume. SQL-backed job history does not make the thread workers or in-memory locks multi-process or distributed; use one backend worker for this design. See [PHASE2_IMPLEMENTATION.md](PHASE2_IMPLEMENTATION.md) for verification and manual restart checks.
+
+## Phase 2A real-data ingestion status
+
+Demo mode remains the default. `POST /api/data/upload-real?instrument=solexs&product=lc` accepts a local SoLEXS L1 light-curve FITS/FITS.gz upload and preserves native counts/s, UTC time, file provenance, gap and rejected-row reports. `POST /api/data/upload-goes-labels?coverage_start=...&coverage_end=...` accepts a local NOAA/NCEI GOES XRS L2 Flare Report CSV to attach independently sourced forecast labels to an already loaded real dataset. Native counts are not relabeled as flux and do not pass into the existing model pipeline. HEL1OS ingestion fails closed until its registered product manual and a representative file establish the schema. Real-data forecasting and performance have not been verified. See [the product contract and exact files needed for verification](docs/real_data_ingestion.md) and [the pre-change repository audit](docs/phase2a_audit.md).
+
+## Phase 2B feature and training safeguards
+
+Forecast targets and labels are excluded from model features, optional STL estimates use trailing data only, and sequence construction preserves unknown labels instead of manufacturing negatives. Training inputs are checked for finite values and class diversity, and inference rejects duplicate timestamps and uses past-only filling. These safeguards do not enable mission-data forecasting: SoLEXS counts are still not calibrated flux, HEL1OS remains gated on a verified product contract, and real-observation model validation has not been performed. See [the Phase 2B implementation and verification report](PHASE2B_IMPLEMENTATION.md).

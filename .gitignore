@@ -12,6 +12,9 @@ ENV/
 *.sqlite3
 
 # Models & intermediate artifacts
+backend/artifacts/pipeline/
+backend/ml/saved_models/*.joblib
+backend/ml/saved_models/*.pt
 ml/saved_models/*.joblib
 ml/saved_models/*.pt
 !ml/saved_models/.gitkeep
@@ -35,3 +38,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+backend/phase2c_partial_labels_backup_*/
+backend/pytest.ini
+backend-phase2c-patch.zip

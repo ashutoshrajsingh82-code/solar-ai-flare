@@ -1,4 +1,4 @@
-﻿import numpy as np
+import numpy as np
 import pandas as pd
 import pytest
 from app.services.model_service import _compute_full_metrics
@@ -285,5 +285,3 @@ def test_evaluation_excludes_unknown_targets_independently_per_horizon():
     assert "No known labels" in metrics["forecast_per_horizon"]["1h"]["undefined_metric_reasons"]["all"]
     assert metrics["forecast_per_horizon"]["3h"]["sample_count"] == 2
     assert metrics["forecast_per_horizon"]["3h"]["positive_count"] == 1
-
-
