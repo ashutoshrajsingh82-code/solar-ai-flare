@@ -260,3 +260,77 @@ def test_goes_labels_are_attached_to_dataset_with_independent_provenance(tmp_pat
     finally:
         session.close()
         engine.dispose()
+def test_reference_labels_preserved_and_unknowns_stay_unknown():
+    timestamps = pd.date_range("2026-01-01", periods=12, freq="h", tz="UTC")
+    df = pd.DataFrame({
+        "timestamp": timestamps,
+        "solexs_flux": np.ones(12),
+        "helios_flux": np.ones(12),
+        "state": [2] * 12,
+        "forecast_1h": [1, 0, np.nan, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    })
+    train = df.iloc[:8].copy()
+    validation = df.iloc[8:10].copy()
+    test = df.iloc[10:].copy()
+    config = LabelConfig(
+        cadence_seconds=3600,
+        preflare_minutes=0,
+        horizons_hours=[1],
+    )
+
+    labeled, purged = generate_split_scoped_labels(
+        df,
+        {"train": train, "validation": validation, "test": test},
+        config,
+        preserve_reference_labels=True,
+    )
+
+    assert labeled.loc[0, "forecast_1h"] == 1
+    assert labeled.loc[1, "forecast_1h"] == 0
+    assert pd.isna(labeled.loc[2, "forecast_1h"])
+    assert labeled.loc[3, "forecast_1h"] == 1
+    assert labeled.loc[4, "forecast_1h"] == 0
+
+    assert pd.isna(labeled.loc[7, "forecast_1h"])
+    assert pd.isna(labeled.loc[9, "forecast_1h"])
+    assert pd.isna(labeled.loc[11, "forecast_1h"])
+    assert purged["train"]["forecast_1h"] == 1
+    assert purged["validation"]["forecast_1h"] == 1
+    assert purged["test"]["forecast_1h"] == 1
+def test_reference_labels_preserved_and_unknowns_stay_unknown():
+    timestamps = pd.date_range("2026-01-01", periods=12, freq="h", tz="UTC")
+    df = pd.DataFrame({
+        "timestamp": timestamps,
+        "solexs_flux": np.ones(12),
+        "helios_flux": np.ones(12),
+        "state": [2] * 12,
+        "forecast_1h": [1, 0, np.nan, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    })
+    train = df.iloc[:8].copy()
+    validation = df.iloc[8:10].copy()
+    test = df.iloc[10:].copy()
+    config = LabelConfig(
+        cadence_seconds=3600,
+        preflare_minutes=0,
+        horizons_hours=[1],
+    )
+
+    labeled, purged = generate_split_scoped_labels(
+        df,
+        {"train": train, "validation": validation, "test": test},
+        config,
+        preserve_reference_labels=True,
+    )
+
+    assert labeled.loc[0, "forecast_1h"] == 1
+    assert labeled.loc[1, "forecast_1h"] == 0
+    assert pd.isna(labeled.loc[2, "forecast_1h"])
+    assert labeled.loc[3, "forecast_1h"] == 1
+    assert labeled.loc[4, "forecast_1h"] == 0
+
+    assert pd.isna(labeled.loc[7, "forecast_1h"])
+    assert pd.isna(labeled.loc[9, "forecast_1h"])
+    assert pd.isna(labeled.loc[11, "forecast_1h"])
+    assert purged["train"]["forecast_1h"] == 1
+    assert purged["validation"]["forecast_1h"] == 1
+    assert purged["test"]["forecast_1h"] == 1

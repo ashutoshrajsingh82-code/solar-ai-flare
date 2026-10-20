@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import List, Callable, Optional
 
 from ml.models.deep_models import DEEP_MODEL_BUILDERS
+from ml.training.validation import validate_training_data
 
 
 @dataclass
@@ -33,6 +34,7 @@ class TrainConfig:
     class_weighting: bool = True
     n_channels: int = 2
     device: str = "cpu"
+    random_seed: int = 42
 
 
 def _limit_torch_threads(max_threads: int = 4) -> None:
@@ -58,12 +60,26 @@ def compute_class_weights(y: np.ndarray, n_classes: int) -> torch.Tensor:
 
 
 def compute_pos_weights(y_forecast: np.ndarray) -> torch.Tensor:
-    """pos_weight per horizon for BCEWithLogitsLoss, for rare positive class."""
-    pos = y_forecast.sum(axis=0)
-    neg = y_forecast.shape[0] - pos
-    pos = np.clip(pos, 1, None)
-    weights = neg / pos
-    return torch.tensor(weights, dtype=torch.float32)
+    """Compute per-horizon positive weights from known training labels only."""
+    y_forecast = np.asarray(y_forecast, dtype=float)
+    known = np.isfinite(y_forecast)
+    pos = np.sum((y_forecast == 1) & known, axis=0).astype(float)
+    neg = np.sum((y_forecast == 0) & known, axis=0).astype(float)
+    if np.any(pos == 0):
+        raise ValueError("Each training forecast horizon needs known positive examples.")
+    return torch.tensor(neg / pos, dtype=torch.float32)
+
+
+def _masked_forecast_loss(logits, targets, pos_weights=None):
+    """BCE averaged over known targets only; NaN labels contribute no loss."""
+    known = torch.isfinite(targets)
+    if not torch.any(known):
+        return logits.sum() * 0.0
+    safe_targets = torch.where(known, targets, torch.zeros_like(targets))
+    element_loss = nn.functional.binary_cross_entropy_with_logits(
+        logits, safe_targets, reduction="none", pos_weight=pos_weights
+    )
+    return element_loss[known].mean()
 
 
 def train_deep_model(
@@ -80,6 +96,17 @@ def train_deep_model(
     should_stop() -> bool allows cooperative cancellation.
     """
     cfg = config or TrainConfig()
+    validate_training_data(X_train, y_now_train, y_fc_train, X_val, y_now_val, y_fc_val)
+    if cfg.batch_size <= 0 or cfg.epochs <= 0 or cfg.learning_rate <= 0:
+        raise ValueError("Training batch_size, epochs, and learning_rate must be positive.")
+    if cfg.n_channels <= 0 or np.asarray(X_train).shape[2] != cfg.n_channels:
+        raise ValueError("Training sequence channel count does not match the model configuration.")
+    if cfg.sequence_length <= 0 or np.asarray(X_train).shape[1] != cfg.sequence_length:
+        raise ValueError("Training sequence length does not match the model configuration.")
+    if not 0 <= cfg.dropout < 1 or cfg.alpha < 0 or cfg.beta < 0 or cfg.alpha + cfg.beta == 0:
+        raise ValueError("Training dropout and loss weights are outside their valid ranges.")
+    np.random.seed(cfg.random_seed)
+    torch.manual_seed(cfg.random_seed)
     _limit_torch_threads()
     device = torch.device(cfg.device)
 
@@ -98,7 +125,8 @@ def train_deep_model(
         torch.tensor(y_now_val, dtype=torch.long),
         torch.tensor(y_fc_val, dtype=torch.float32),
     )
-    train_loader = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True)
+    loader_generator = torch.Generator().manual_seed(cfg.random_seed)
+    train_loader = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, generator=loader_generator)
     val_loader = DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False)
 
     if cfg.class_weighting and len(y_now_train) > 0:
@@ -109,8 +137,6 @@ def train_deep_model(
         pos_weights = None
 
     ce_loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-    bce_loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weights)
-
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
 
     history = []
@@ -125,7 +151,7 @@ def train_deep_model(
             optimizer.zero_grad()
             now_logits, fc_logits = model(xb)
             loss_now = ce_loss_fn(now_logits, yb_now)
-            loss_fc = bce_loss_fn(fc_logits, yb_fc)
+            loss_fc = _masked_forecast_loss(fc_logits, yb_fc, pos_weights)
             loss = cfg.alpha * loss_now + cfg.beta * loss_fc
             loss.backward()
             optimizer.step()
@@ -141,7 +167,7 @@ def train_deep_model(
                 xb, yb_now, yb_fc = xb.to(device), yb_now.to(device), yb_fc.to(device)
                 now_logits, fc_logits = model(xb)
                 loss_now = ce_loss_fn(now_logits, yb_now)
-                loss_fc = bce_loss_fn(fc_logits, yb_fc)
+                loss_fc = _masked_forecast_loss(fc_logits, yb_fc, pos_weights)
                 loss = cfg.alpha * loss_now + cfg.beta * loss_fc
                 val_loss_sum += loss.item() * xb.size(0)
 
@@ -158,9 +184,14 @@ def train_deep_model(
             fc_prob = np.concatenate(all_fc_prob, axis=0)
             fc_true = np.concatenate(all_fc_true, axis=0)
             for h in range(fc_prob.shape[1]):
-                m = evaluate_binary_forecast(fc_true[:, h], fc_prob[:, h])
-                tss_list.append(m["tss"])
-                hss_list.append(m["hss"])
+                known = np.isfinite(fc_true[:, h])
+                if not known.any():
+                    continue
+                m = evaluate_binary_forecast(fc_true[known, h], fc_prob[known, h])
+                if m["tss"] is not None:
+                    tss_list.append(m["tss"])
+                if m["hss"] is not None:
+                    hss_list.append(m["hss"])
 
         record = {
             "epoch": epoch + 1,

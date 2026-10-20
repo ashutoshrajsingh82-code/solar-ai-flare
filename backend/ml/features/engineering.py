@@ -28,17 +28,21 @@ def _steps_for_minutes(minutes: int, cadence_seconds: int) -> int:
 
 def add_rolling_features(df: pd.DataFrame, config: FeatureConfig = None) -> pd.DataFrame:
     cfg = config or FeatureConfig()
+    _validate_feature_input(df, cfg)
     out = df.copy()
+    if "timestamp" in out.columns:
+        out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True, errors="coerce", format="mixed")
 
     for channel in ["solexs_flux", "helios_flux"]:
         if channel not in out.columns:
             continue
+        out[channel] = pd.to_numeric(out[channel], errors="coerce")
         prefix = channel.split("_")[0]  # "solexs" / "helios"
         series = out[channel]
 
         # simple 1-step rate of change / gradient
         out[f"{prefix}_diff1"] = series.diff()
-        out[f"{prefix}_pct_change"] = series.pct_change().replace([np.inf, -np.inf], np.nan)
+        out[f"{prefix}_pct_change"] = series.pct_change(fill_method=None).replace([np.inf, -np.inf], np.nan)
 
         for w_min in cfg.windows_minutes:
             w = _steps_for_minutes(w_min, cfg.cadence_seconds)
@@ -79,35 +83,71 @@ def add_rolling_features(df: pd.DataFrame, config: FeatureConfig = None) -> pd.D
 
 
 def add_stl_features(df: pd.DataFrame, config: FeatureConfig = None) -> pd.DataFrame:
-    """Optional STL decomposition. Skipped gracefully if sequence too short."""
+    """Add causal STL estimates from trailing windows only.
+
+    Each row's decomposition is fitted using observations ending at that row.
+    This is more expensive than one full-series decomposition, but prevents
+    future measurements from changing features at an earlier forecast time.
+    Missing values in a trailing window leave its STL values unknown.
+    """
     from statsmodels.tsa.seasonal import STL
 
     cfg = config or FeatureConfig()
+    _validate_feature_input(df, cfg)
     out = df.copy()
+    if "timestamp" in out.columns:
+        out["timestamp"] = pd.to_datetime(out["timestamp"], utc=True, errors="coerce", format="mixed")
     period_steps = _steps_for_minutes(cfg.stl_period_minutes, cfg.cadence_seconds)
+    window_steps = period_steps * 2
 
     for channel in ["solexs_flux", "helios_flux"]:
         if channel not in out.columns:
             continue
-        series = out[channel].interpolate(limit_direction="both")
-        if len(series) < period_steps * 2 or series.isna().all():
-            out[f"{channel}_stl_trend"] = np.nan
-            out[f"{channel}_stl_seasonal"] = np.nan
-            out[f"{channel}_stl_resid"] = np.nan
-            continue
-        try:
-            log_series = np.log10(series + EPS)
-            stl_result = STL(log_series, period=period_steps, robust=True).fit()
-            out[f"{channel}_stl_trend"] = stl_result.trend
-            out[f"{channel}_stl_seasonal"] = stl_result.seasonal
-            out[f"{channel}_stl_resid"] = stl_result.resid
-        except Exception:
-            out[f"{channel}_stl_trend"] = np.nan
-            out[f"{channel}_stl_seasonal"] = np.nan
-            out[f"{channel}_stl_resid"] = np.nan
+        values = pd.to_numeric(out[channel], errors="coerce").to_numpy(dtype=float)
+        out[channel] = values
+        components = np.full((len(values), 3), np.nan, dtype=float)
+        for end in range(window_steps - 1, len(values)):
+            start = end - window_steps + 1
+            window = values[start:end + 1]
+            if not np.isfinite(window).all() or np.any(window + EPS <= 0):
+                continue
+            result = STL(np.log10(window + EPS), period=period_steps, robust=True).fit()
+            components[end] = (result.trend[-1], result.seasonal[-1], result.resid[-1])
+        out[f"{channel}_stl_trend"] = components[:, 0]
+        out[f"{channel}_stl_seasonal"] = components[:, 1]
+        out[f"{channel}_stl_resid"] = components[:, 2]
     return out
+
+
+def _validate_feature_input(df: pd.DataFrame, config: FeatureConfig) -> None:
+    if config.cadence_seconds <= 0 or config.stl_period_minutes <= 0:
+        raise ValueError("Feature cadence and STL period must be positive.")
+    if any(not isinstance(w, int) or w <= 0 for w in config.windows_minutes):
+        raise ValueError("Rolling feature windows must be positive integer minutes.")
+    if "timestamp" in df.columns:
+        timestamps = pd.to_datetime(df["timestamp"], utc=True, errors="coerce", format="mixed")
+        if timestamps.isna().any():
+            raise ValueError("Feature timestamps must be valid UTC-compatible values.")
+        if timestamps.duplicated().any():
+            raise ValueError("Feature timestamps must not contain duplicates.")
+        if not timestamps.is_monotonic_increasing:
+            raise ValueError("Feature observations must be ordered by timestamp.")
+    for channel in ("solexs_flux", "helios_flux"):
+        if channel in df.columns:
+            values = pd.to_numeric(df[channel], errors="coerce").to_numpy(dtype=float)
+            malformed = df[channel].notna().to_numpy() & np.isnan(values)
+            if malformed.any():
+                raise ValueError(f"Feature input {channel} contains non-numeric values.")
+            if np.isinf(values).any():
+                raise ValueError(f"Feature input {channel} contains infinite values.")
 
 
 def get_feature_columns(df: pd.DataFrame) -> List[str]:
     exclude = {"timestamp", "state", "flare_class", "solexs_flux", "helios_flux"}
-    return [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])]
+    target_prefixes = ("forecast_", "target_", "label_", "nowcast_")
+    return [
+        c for c in df.columns
+        if c not in exclude
+        and not c.startswith(target_prefixes)
+        and pd.api.types.is_numeric_dtype(df[c])
+    ]

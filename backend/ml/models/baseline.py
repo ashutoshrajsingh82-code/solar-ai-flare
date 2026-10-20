@@ -11,7 +11,6 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
-from sklearn.multioutput import MultiOutputClassifier
 
 from ml.models.baseline_rules import RULE_BUILDERS
 
@@ -54,13 +53,30 @@ class BaselineMultiTaskModel:
         self.name = name
         self.base_estimator_fn = base_estimator_fn
         self.nowcast_model = base_estimator_fn()
-        self.forecast_model = MultiOutputClassifier(base_estimator_fn())
+        # Forecast estimators are fitted independently because each horizon can
+        # have a different set of known labels.
+        self.forecast_model = None  # retained as a compatibility attribute
+        self.forecast_models_ = []
         self.feature_names_ = None
 
     def fit(self, X: np.ndarray, y_nowcast: np.ndarray, y_forecast: np.ndarray, feature_names=None):
         self.feature_names_ = feature_names
+        X = np.asarray(X)
+        y_forecast = np.asarray(y_forecast, dtype=float)
         self.nowcast_model.fit(X, y_nowcast)
-        self.forecast_model.fit(X, y_forecast)
+        self.forecast_models_ = []
+        for h in range(y_forecast.shape[1]):
+            known = np.isfinite(y_forecast[:, h])
+            targets = y_forecast[known, h]
+            if len(targets) == 0:
+                raise ValueError(f"Forecast horizon {h} has no known training labels.")
+            classes = np.unique(targets)
+            if len(classes) == 1:
+                self.forecast_models_.append(float(classes[0]))
+            else:
+                estimator = self.base_estimator_fn()
+                estimator.fit(X[known], targets.astype(int))
+                self.forecast_models_.append(estimator)
         return self
 
     def predict_nowcast_proba(self, X: np.ndarray) -> np.ndarray:
@@ -68,14 +84,15 @@ class BaselineMultiTaskModel:
 
     def predict_forecast_proba(self, X: np.ndarray) -> np.ndarray:
         """Returns shape (n_samples, n_horizons) of P(class=1) for each horizon."""
-        proba_list = self.forecast_model.predict_proba(X)  # list of (n_samples, n_classes_h) arrays
-        out = np.zeros((X.shape[0], len(proba_list)))
-        for i, p in enumerate(proba_list):
-            if p.shape[1] == 2:
-                out[:, i] = p[:, 1]
-            else:
-                only_class = self.forecast_model.estimators_[i].classes_[0]
-                out[:, i] = 1.0 if only_class == 1 else 0.0
+        X = np.asarray(X)
+        out = np.zeros((X.shape[0], len(self.forecast_models_)))
+        for i, estimator in enumerate(self.forecast_models_):
+            if isinstance(estimator, float):
+                out[:, i] = estimator
+                continue
+            probabilities = estimator.predict_proba(X)
+            classes = list(estimator.classes_)
+            out[:, i] = probabilities[:, classes.index(1)] if 1 in classes else 0.0
         return out
 
     def feature_importance(self):

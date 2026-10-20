@@ -40,6 +40,8 @@ def build_windows(df: pd.DataFrame, config: WindowConfig = None) -> Tuple[np.nda
     end_timestamps : np.ndarray of the timestamp at each window's final step
     """
     cfg = config or WindowConfig()
+    if cfg.sequence_length <= 0 or cfg.stride <= 0:
+        raise ValueError("Window sequence_length and stride must be positive.")
     cols = list(cfg.channel_cols)
     if cfg.extra_feature_cols:
         cols += cfg.extra_feature_cols
@@ -47,6 +49,16 @@ def build_windows(df: pd.DataFrame, config: WindowConfig = None) -> Tuple[np.nda
     missing = [c for c in cols if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns for windowing: {missing}")
+    missing_targets = [c for c in ["timestamp", "state", *cfg.horizon_cols] if c not in df.columns]
+    if missing_targets:
+        raise ValueError(f"Missing required targets for windowing: {missing_targets}")
+    timestamps = pd.to_datetime(df["timestamp"], utc=True, errors="coerce", format="mixed")
+    if timestamps.isna().any():
+        raise ValueError("Window timestamps must be valid UTC-compatible values.")
+    if timestamps.duplicated().any():
+        raise ValueError("Window timestamps must not contain duplicates.")
+    if not timestamps.is_monotonic_increasing:
+        raise ValueError("Window observations must be ordered by timestamp.")
 
     data = df[cols].values.astype(np.float32)
     n = len(df)
@@ -62,20 +74,23 @@ def build_windows(df: pd.DataFrame, config: WindowConfig = None) -> Tuple[np.nda
     X = np.stack([data[s:s + seq_len] for s in starts])
 
     end_idx = starts + seq_len - 1
-    y_nowcast = df["state"].values[end_idx].astype(np.int64) if "state" in df.columns else np.zeros(len(starts), dtype=np.int64)
-
-    if all(c in df.columns for c in cfg.horizon_cols):
-        y_forecast = df[cfg.horizon_cols].values[end_idx].astype(np.float32)
-    else:
-        y_forecast = np.zeros((len(starts), len(cfg.horizon_cols)), dtype=np.float32)
-
-    end_timestamps = df["timestamp"].values[end_idx] if "timestamp" in df.columns else np.arange(len(starts))
+    nowcast_rows = pd.to_numeric(df["state"], errors="coerce").to_numpy(dtype=float)[end_idx]
+    forecast_rows = df[cfg.horizon_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)[end_idx]
+    end_timestamps = np.asarray(timestamps.iloc[end_idx].tolist(), dtype=object)
 
     # drop windows containing NaNs (from unfilled large telemetry gaps)
-    valid_mask = ~np.isnan(X).any(axis=(1, 2)) & np.isfinite(y_forecast).all(axis=1)
-    if "state" in df.columns:
-        valid_mask &= np.isfinite(df["state"].values[end_idx])
-    return X[valid_mask], y_nowcast[valid_mask], y_forecast[valid_mask], end_timestamps[valid_mask]
+    # Unknown forecast labels are retained as NaN; they are masked during loss/evaluation.
+    # Only invalid features or nowcast targets make a sample unusable.
+    valid_mask = np.isfinite(X).all(axis=(1, 2)) & np.isfinite(nowcast_rows)
+    valid_nowcast = nowcast_rows[valid_mask]
+    valid_forecast = forecast_rows[valid_mask]
+    if not np.equal(valid_nowcast, np.floor(valid_nowcast)).all() or ((valid_nowcast < 0) | (valid_nowcast > 3)).any():
+        raise ValueError("Window nowcast targets must be class indices from 0 to 3.")
+    known_forecast = np.isfinite(valid_forecast)
+    if not np.isin(valid_forecast[known_forecast], (0, 1)).all():
+        raise ValueError("Known window forecast targets must be binary; unknown values must remain missing.")
+    return (X[valid_mask], valid_nowcast.astype(np.int64), valid_forecast.astype(np.float32),
+            end_timestamps[valid_mask])
 
 
 def chronological_split(df: pd.DataFrame, train_frac=0.70, val_frac=0.15) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

@@ -19,6 +19,9 @@ def record(model_id, checkpoint, transformer, status="trained"):
         created_at="now", training_dataset="test", input_configuration="fusion",
         checkpoint_path=str(checkpoint), transformer_path=str(transformer),
         scaler_path=str(transformer), model_kind="classical", status=status,
+        params={"target_definition": "pipeline_forecast_targets_v1",
+                "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
+                "feature_schema_version": "rolling_features_v1"},
     )
 
 
@@ -61,3 +64,15 @@ def test_legacy_records_are_untrained_and_not_active(tmp_path):
     }))
     assert registry.get("legacy")["status"] == "untrained"
     assert registry.get_active() is None
+
+
+def test_trained_artifact_without_target_contract_is_rejected(tmp_path):
+    registry = ModelRegistry(str(tmp_path))
+    checkpoint, transformer = tmp_path / "model.joblib", tmp_path / "scaler.joblib"
+    joblib.dump({"model": object(), "feature_cols": ["flux"]}, checkpoint)
+    joblib.dump(FittedTransformer(), transformer)
+    rec = record("no-contract", checkpoint, transformer)
+    rec.params = {}
+    registry.register(rec)
+    with pytest.raises(ValueError, match="target and forecast-horizon contract"):
+        registry.set_active("no-contract")

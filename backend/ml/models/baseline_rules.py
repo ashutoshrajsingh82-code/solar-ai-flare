@@ -68,7 +68,11 @@ class ClimatologyBaseline(_BaselineBase):
         y_now = np.asarray(y_nowcast).astype(int)
         counts = np.bincount(y_now, minlength=N_NOWCAST_CLASSES).astype(float)
         self.nowcast_prior_ = counts / max(1.0, counts.sum())
-        self.forecast_rate_ = np.asarray(y_forecast, dtype=float).mean(axis=0)
+        y_fc = np.asarray(y_forecast, dtype=float)
+        self.forecast_rate_ = np.asarray([
+            float(np.mean(col[np.isfinite(col)])) if np.isfinite(col).any() else 0.0
+            for col in y_fc.T
+        ])
         return self
 
     def predict_nowcast_proba(self, X):
@@ -170,14 +174,17 @@ class _FeatureSubsetBaseline(_BaselineBase):
         y_now = np.asarray(y_nowcast).astype(int)
         self.nowcast_model_ = self._make(self.nowcast_kind, multiclass=True).fit(Zs, y_now)
 
-        y_fc = np.asarray(y_forecast).astype(int)
+        y_fc = np.asarray(y_forecast, dtype=float)
         self.forecast_models_ = []
         for h in range(y_fc.shape[1]):
-            col = y_fc[:, h]
+            known = np.isfinite(y_fc[:, h])
+            col = y_fc[known, h]
             if len(np.unique(col)) < 2:
                 self.forecast_models_.append(float(col[0]) if len(col) else 0.0)  # constant
             else:
-                self.forecast_models_.append(self._make(self.forecast_kind, multiclass=False).fit(Zs, col))
+                self.forecast_models_.append(
+                    self._make(self.forecast_kind, multiclass=False).fit(Zs[known], col.astype(int))
+                )
         return self
 
     def predict_nowcast_proba(self, X):

@@ -46,14 +46,20 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
     if not required_flux.issubset(pipeline_state.raw_df.columns):
         source = pipeline_state.dataset_meta.get("source", "unknown")
         raise ValueError(
-            f"The loaded {source} observations do not match the existing dual-flux pipeline contract. "
-            "Raw SoLEXS/HEL1OS counts cannot be relabeled as flux; verified instrument adapters and reference flare labels are required."
+            f"The loaded {source} observations do not match the existing "
+            "dual-flux pipeline contract. Raw SoLEXS/HEL1OS counts cannot "
+            "be relabeled as flux; verified instrument adapters and "
+            "reference flare labels are required."
         )
 
-    if "state" not in pipeline_state.raw_df.columns or pipeline_state.raw_df["state"].isna().any():
+    if (
+        "state" not in pipeline_state.raw_df.columns
+        or pipeline_state.raw_df["state"].isna().any()
+    ):
         raise ValueError(
-            "Training labels are missing or unknown. Provide verified reference labels and their provenance; "
-            "unlabeled observations must not be treated as quiet intervals."
+            "Training labels are missing or unknown. Provide verified "
+            "reference labels and their provenance; unlabeled observations "
+            "must not be treated as quiet intervals."
         )
 
     def report_stage(stage):
@@ -185,7 +191,7 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
         time.time() - t0,
     )
 
-    # --- Label generation ---
+    # --- Label generation / reference-target preservation ---
     report_stage("labeling")
     t0 = time.time()
 
@@ -194,28 +200,37 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
         preflare_minutes=req.preflare_minutes,
     )
 
-    labeled_df, boundary_purged = generate_split_scoped_labels(
-        featured_df,
-        {"train": train_df, "validation": val_df, "test": test_df},
-        label_cfg,
+    # Metadata identifies that independent reference labels were attached.
+    # This flag alone is not scientific verification; the Phase 2C evidence
+    # gate must still validate provenance, coverage, timestamps and features.
+    has_reference_labels = (
+        pipeline_state.dataset_meta.get("source") != "demo"
+        and bool(pipeline_state.dataset_meta.get("reference_labels"))
     )
 
-    # --- Count positive labels in each chronological split ---
-    forecast_columns = [
-        "forecast_1h",
-        "forecast_3h",
-        "forecast_6h",
-        "forecast_12h",
-        "forecast_24h",
-    ]
+    labeled_df, boundary_purged = generate_split_scoped_labels(
+        featured_df,
+        {
+            "train": train_df,
+            "validation": val_df,
+            "test": test_df,
+        },
+        label_cfg,
+        preserve_reference_labels=has_reference_labels,
+    )
 
-    positive_counts_by_split = {}
+    forecast_columns = [
+        f"forecast_{h}h" for h in label_cfg.horizons_hours
+    ]
 
     split_dataframes = {
         "train": train_df,
         "validation": val_df,
         "test": test_df,
     }
+
+    positive_counts_by_split = {}
+    target_counts_by_split = {}
 
     for split_name, split_df in split_dataframes.items():
         split_timestamps = split_df["timestamp"]
@@ -224,33 +239,57 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
             labeled_df["timestamp"].isin(split_timestamps)
         ]
 
-        positive_counts_by_split[split_name] = {
-            column: int(split_labels[column].sum())
-            for column in forecast_columns
-        }
+        positive_counts_by_split[split_name] = {}
+        target_counts_by_split[split_name] = {}
 
-    # Count all rows and positive labels for each horizon.
+        for column in forecast_columns:
+            if column not in split_labels.columns:
+                continue
+
+            target = pd.to_numeric(
+                split_labels[column],
+                errors="coerce",
+            )
+            known = target.isin([0, 1])
+
+            positive_counts_by_split[split_name][column] = int(
+                (target == 1).sum()
+            )
+            target_counts_by_split[split_name][column] = {
+                "known": int(known.sum()),
+                "positive": int((target == 1).sum()),
+                "negative": int((target == 0).sum()),
+                "unknown": int((~known).sum()),
+            }
+
     positive_totals = {
-        column: int(labeled_df[column].sum())
+        column: int(
+            pd.to_numeric(labeled_df[column], errors="coerce")
+            .eq(1)
+            .sum()
+        )
         for column in forecast_columns
+        if column in labeled_df.columns
     }
 
     label_report = {
         "input_rows": len(featured_df),
         "output_rows": len(labeled_df),
-        "preflare_minutes": req.preflare_minutes,
-        "forecast_horizons": [1, 3, 6, 12, 24],
-        "positive_rate_1h": (
-            float(labeled_df["forecast_1h"].mean())
-            if len(labeled_df)
-            else 0.0
+        "label_mode": (
+            "independent_reference_labels"
+            if has_reference_labels
+            else "demo_event_derived"
         ),
-        "positive_rate_24h": (
-            float(labeled_df["forecast_24h"].mean())
-            if len(labeled_df)
-            else 0.0
+        "preflare_minutes": req.preflare_minutes,
+        "forecast_horizons": list(label_cfg.horizons_hours),
+        "positive_rate_1h": _known_positive_rate(
+            labeled_df, "forecast_1h"
+        ),
+        "positive_rate_24h": _known_positive_rate(
+            labeled_df, "forecast_24h"
         ),
         "positive_counts_by_split": positive_counts_by_split,
+        "target_counts_by_split": target_counts_by_split,
         "positive_totals": positive_totals,
         "boundary_purged_rows_by_split_and_horizon": boundary_purged,
         "warnings": [],
@@ -297,46 +336,111 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
             else None
         ),
         "note": (
-            "Chronological split (earliest 70% train / next 15% validation / latest 15% test); "
-            "forecast labels are generated within each split and horizon tails are purged. "
-            "Scaler fit on train split only."
+            "Chronological split (earliest 70% train / next 15% validation / "
+            "latest 15% test); forecast horizon tails are purged per split. "
+            "Scaler fit on train split only. Forecast targets are either "
+            "preserved from attached reference labels or generated for demo "
+            "data; see label_mode and target_counts_by_split."
         ),
     }
 
 
-def generate_split_scoped_labels(featured_df, split_dataframes, label_cfg):
-    """Generate event labels within each chronological split and purge unknown tails.
+def _known_positive_rate(df: pd.DataFrame, column: str):
+    """Return positive fraction among known binary targets, or None if undefined."""
+    if column not in df.columns:
+        return None
+
+    target = pd.to_numeric(df[column], errors="coerce")
+    known = target.isin([0, 1])
+
+    if not known.any():
+        return None
+
+    return float((target[known] == 1).mean())
+
+
+def generate_split_scoped_labels(
+    featured_df,
+    split_dataframes,
+    label_cfg,
+    preserve_reference_labels=False,
+):
+    """Generate split-scoped demo labels or preserve independent reference labels.
 
     An event in validation/test cannot create a positive training label. Rows
-    whose forecast horizon extends past their split boundary are marked NaN so
-    model training drops them instead of treating an unobserved future as quiet.
+    whose forecast horizon extends past their split boundary are marked NaN
+    so training drops them rather than treating an unobserved future as quiet.
+
+    Reference-label mode never regenerates targets from the state column.
     """
     output = featured_df.copy().reset_index(drop=True)
     horizons = list(label_cfg.horizons_hours)
     columns = [f"forecast_{h}h" for h in horizons]
-    output[columns] = float("nan")
+
+    if preserve_reference_labels:
+        missing = [
+            column for column in columns
+            if column not in output.columns
+        ]
+        if missing:
+            raise ValueError(
+                "Reference-label mode requires all forecast target columns; "
+                f"missing: {missing}. Refusing to generate replacement labels."
+            )
+
+        # Preserve independent targets; coerce invalid/missing values to unknown.
+        for column in columns:
+            values = pd.to_numeric(output[column], errors="coerce")
+            invalid = values.notna() & ~values.isin([0, 1])
+
+            if invalid.any():
+                raise ValueError(
+                    f"Reference target {column} contains non-binary values."
+                )
+
+            output[column] = values
+    else:
+        # Demo/event-derived labels retain the existing behavior.
+        output[columns] = float("nan")
+
     purged = {}
 
     for split_name, split_df in split_dataframes.items():
         timestamps = set(split_df["timestamp"].tolist())
-        indices = output.index[output["timestamp"].isin(timestamps)].tolist()
+        indices = output.index[
+            output["timestamp"].isin(timestamps)
+        ].tolist()
+
         split_part = output.loc[indices].copy().reset_index(drop=True)
+
         if split_part.empty:
-            purged[split_name] = {column: 0 for column in columns}
+            purged[split_name] = {
+                column: 0 for column in columns
+            }
             continue
-        split_part = apply_preflare_window(split_part, label_cfg)
-        split_part = generate_forecast_labels(split_part, label_cfg)
-        for column in columns:
-            output.loc[indices, column] = split_part[column].to_numpy()
-        output.loc[indices, "state"] = split_part["state"].to_numpy()
+
+        if not preserve_reference_labels:
+            split_part = apply_preflare_window(split_part, label_cfg)
+            split_part = generate_forecast_labels(split_part, label_cfg)
+
+            for column in columns:
+                output.loc[indices, column] = split_part[column].to_numpy()
+
+            output.loc[indices, "state"] = split_part["state"].to_numpy()
 
         split_purged = {}
+
         for horizon, column in zip(horizons, columns):
-            steps = int(horizon * 3600 / label_cfg.cadence_seconds)
+            steps = int(
+                horizon * 3600 / label_cfg.cadence_seconds
+            )
             n_purge = min(steps, len(indices))
+
             if n_purge:
                 output.loc[indices[-n_purge:], column] = float("nan")
+
             split_purged[column] = n_purge
+
         purged[split_name] = split_purged
 
     return output, purged

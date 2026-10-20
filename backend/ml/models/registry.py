@@ -97,6 +97,12 @@ class ModelRegistry:
             raise KeyError(f"Model {model_id} not found in registry.")
         if rec.get("status") == "untrained":
             raise ValueError(f"Model {model_id} is untrained and cannot be activated.")
+        if rec.get("status") == "trained":
+            params = rec.get("params", {})
+            if not params.get("target_definition") or not params.get("forecast_horizons"):
+                raise ValueError(f"Model {model_id} has no compatible target and forecast-horizon contract.")
+            if not params.get("feature_schema_version"):
+                raise ValueError(f"Model {model_id} has no compatible feature-schema version.")
         checkpoint = rec.get("checkpoint_path")
         if not checkpoint or not os.path.isfile(checkpoint):
             raise ValueError(f"Model {model_id} checkpoint is missing.")

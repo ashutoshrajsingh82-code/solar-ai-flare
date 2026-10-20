@@ -92,17 +92,40 @@ def evaluate_binary_forecast(y_true: np.ndarray, y_prob: np.ndarray, threshold: 
     counts = binary_confusion_counts(y_true, y_pred)
     tp, fp, tn, fn = counts["tp"], counts["fp"], counts["tn"], counts["fn"]
 
+    reasons = {}
+    total = int(len(y_true))
+    positive_count = int(np.sum(y_true == 1))
+    negative_count = int(np.sum(y_true == 0))
+    if tp + fn == 0:
+        reasons["pod"] = "No positive cases in the evaluated sample."
+    if tp + fp == 0:
+        reasons["far"] = "No positive predictions at the configured threshold."
+    if tp + fn == 0 or fp + tn == 0:
+        reasons["tss"] = "TSS requires at least one positive and one negative case."
+    if (tp + fn) * (fn + tn) + (tp + fp) * (fp + tn) == 0:
+        reasons["hss"] = "HSS denominator is zero for this contingency table."
+    if positive_count == 0:
+        reasons["recall"] = "Recall requires at least one positive case."
+    if tp + fp == 0:
+        reasons["precision"] = "Precision requires at least one positive prediction."
+
     metrics = {
+        "sample_count": total,
+        "positive_count": positive_count,
+        "negative_count": negative_count,
+        "positive_prevalence": float(positive_count / total),
         "threshold": threshold,
         "tp": tp, "fp": fp, "tn": tn, "fn": fn,
         "accuracy": float((tp + tn) / max(1, (tp + fp + tn + fn))),
-        "precision": float(precision_score(y_true, y_pred, zero_division=0)),
-        "recall": float(recall_score(y_true, y_pred, zero_division=0)),
-        "pod": probability_of_detection(tp, fp, tn, fn),
+        "precision": float(precision_score(y_true, y_pred, zero_division=0)) if tp + fp else None,
+        "recall": float(recall_score(y_true, y_pred, zero_division=0)) if positive_count else None,
+        "pod": probability_of_detection(tp, fp, tn, fn) if tp + fn else None,
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
-        "false_alarm_rate": false_alarm_rate(tp, fp, tn, fn),
-        "tss": true_skill_statistic(tp, fp, tn, fn),
-        "hss": heidke_skill_score(tp, fp, tn, fn),
+        "false_alarm_rate": false_alarm_rate(tp, fp, tn, fn) if tp + fp else None,
+        "far": false_alarm_rate(tp, fp, tn, fn) if tp + fp else None,
+        "tss": true_skill_statistic(tp, fp, tn, fn) if tp + fn and fp + tn else None,
+        "hss": heidke_skill_score(tp, fp, tn, fn) if not ((tp + fn) * (fn + tn) + (tp + fp) * (fp + tn) == 0) else None,
+        "undefined_metric_reasons": reasons,
     }
 
     if len(np.unique(y_true)) > 1:
@@ -111,6 +134,8 @@ def evaluate_binary_forecast(y_true: np.ndarray, y_prob: np.ndarray, threshold: 
     else:
         metrics["roc_auc"] = None
         metrics["pr_auc"] = None
+        reasons["roc_auc"] = "ROC-AUC requires both positive and negative cases."
+        reasons["pr_auc"] = "PR-AUC is undefined when the holdout contains no positive cases." if positive_count == 0 else "PR-AUC requires both classes in this evaluation contract."
 
     metrics["brier_score"] = float(brier_score_loss(y_true, y_prob))
     return metrics

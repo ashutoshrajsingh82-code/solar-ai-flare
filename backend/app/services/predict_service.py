@@ -10,6 +10,7 @@ from ml.models.deep_models import DEEP_MODEL_BUILDERS
 from ml.inference.predictor import _format_prediction, risk_level_from_probability
 from ml.preprocessing.transform import FluxTransformer
 from ml.features.engineering import add_rolling_features, FeatureConfig
+from ml.inference.input_validation import normalize_prediction_rows
 
 _loaded_cache = {}
 
@@ -65,18 +66,7 @@ def predict_from_raw_window(rows: list, model_id: Optional[str] = None) -> dict:
     runs them through the FITTED transformer + feature engineering, and
     produces a prediction using the resolved model.
     """
-    df = pd.DataFrame(rows)
-    required = {"timestamp", "solexs_flux", "helios_flux"}
-    if not required.issubset(df.columns) or len(df) == 0:
-        raise ValueError("Prediction rows must include timestamp, solexs_flux, and helios_flux.")
-    df["solexs_flux"] = pd.to_numeric(df["solexs_flux"], errors="coerce")
-    df["helios_flux"] = pd.to_numeric(df["helios_flux"], errors="coerce")
-    if not np.isfinite(df[["solexs_flux", "helios_flux"]].to_numpy()).all():
-        raise ValueError("Prediction flux values must be finite numbers.")
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
-    if df["timestamp"].isna().any():
-        raise ValueError("Prediction timestamps must be valid.")
-    df = df.sort_values("timestamp").reset_index(drop=True)
+    df = normalize_prediction_rows(rows)
     rec = resolve_model(model_id)
     transformer_path = rec.get("transformer_path") or rec.get("scaler_path")
     if rec.get("transformer_required", True):
@@ -89,7 +79,7 @@ def predict_from_raw_window(rows: list, model_id: Optional[str] = None) -> dict:
         raise ValueError("The selected model has no compatible preprocessing transformer.")
     transformed = transformer.transform(df)
     featured = add_rolling_features(transformed, FeatureConfig(cadence_seconds=pipeline_state.cadence_seconds))
-    featured = featured.bfill().ffill().fillna(0)
+    featured = featured.ffill().fillna(0)
 
     result = _predict_with_record(rec, featured)
     result["model"] = rec["architecture"]
@@ -145,7 +135,7 @@ def make_simulator_predict_fn(model_id: Optional[str] = None):
     def _fn(window_df: pd.DataFrame) -> dict:
         transformed = transformer.transform(window_df)
         featured = add_rolling_features(transformed, FeatureConfig(cadence_seconds=pipeline_state.cadence_seconds))
-        featured = featured.bfill().ffill().fillna(0)
+        featured = featured.ffill().fillna(0)
         result = _predict_with_record(rec, featured)
         result["model"] = rec["architecture"]
         return result

@@ -116,3 +116,24 @@ def test_single_class_targets_return_none_for_auc_metrics():
     assert metrics["roc_auc"] is None
     assert metrics["pr_auc"] is None
     assert np.isfinite(metrics["brier_score"])
+
+
+def test_undefined_event_metrics_are_null_with_reasons():
+    metrics = evaluate_binary_forecast([0, 0, 0], [0.1, 0.2, 0.3])
+    assert metrics["pod"] is None
+    assert metrics["tss"] is None
+    assert metrics["recall"] is None
+    assert metrics["far"] is None
+    assert metrics["hss"] is None
+    assert metrics["positive_prevalence"] == 0
+    assert metrics["undefined_metric_reasons"]["pod"]
+    assert metrics["undefined_metric_reasons"]["tss"]
+
+
+def test_far_and_brier_use_the_documented_definitions():
+    y_true = np.array([1, 0, 1, 0])
+    y_prob = np.array([0.8, 0.7, 0.4, 0.1])
+    metrics = evaluate_binary_forecast(y_true, y_prob, threshold=0.5)
+    # TP=1, FP=1, so FAR=FP/(TP+FP)=0.5.
+    assert metrics["far"] == pytest.approx(0.5)
+    assert metrics["brier_score"] == pytest.approx(np.mean((y_prob - y_true) ** 2))

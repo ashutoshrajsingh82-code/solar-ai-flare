@@ -64,7 +64,7 @@ def read_goes_flare_report_csv(
         ("end_time", "end_time"),
     ):
         out[target_name] = pd.to_datetime(
-            raw[source_name], utc=True, errors="coerce"
+            raw[source_name], utc=True, errors="coerce", format="mixed"
         )
 
     raw_classes = (
@@ -192,7 +192,7 @@ def label_observations_from_goes(
     (observation_time, observation_time + horizon].
     """
     obs = pd.to_datetime(
-        observations["timestamp"], utc=True, errors="coerce"
+        observations["timestamp"], utc=True, errors="coerce", format="mixed"
     )
 
     if obs.isna().any():
@@ -225,7 +225,7 @@ def label_observations_from_goes(
         ].copy()
 
         event_times = pd.to_datetime(
-            significant["start_time"], utc=True, errors="coerce"
+            significant["start_time"], utc=True, errors="coerce", format="mixed"
         )
 
         if event_times.isna().any():
@@ -299,7 +299,7 @@ def label_observations_from_goes(
 
 
 def _utc_timestamp(value, name):
-    result = pd.to_datetime(value, utc=True, errors="coerce")
+    result = pd.to_datetime(value, utc=True, errors="coerce", format="mixed")
 
     if pd.isna(result):
         raise ValueError(

@@ -73,3 +73,26 @@ def test_chronological_split_no_leakage():
     # Ensure strictly monotonic timestamps (no shuffling)
     assert train_df["timestamp"].max() < val_df["timestamp"].min()
     assert val_df["timestamp"].max() < test_df["timestamp"].min()
+
+def test_alignment_preserves_forecast_targets_conservatively():
+    df = pd.DataFrame({
+        "timestamp": pd.to_datetime([
+            "2026-01-01T00:00:05Z",
+            "2026-01-01T00:00:20Z",
+            "2026-01-01T00:01:05Z",
+            "2026-01-01T00:01:20Z",
+            "2026-01-01T00:02:05Z",
+            "2026-01-01T00:02:20Z",
+        ]),
+        "solexs_flux": [1.0, 1.2, 1.3, 1.4, 1.5, 1.6],
+        "helios_flux": [2.0, 2.2, 2.3, 2.4, 2.5, 2.6],
+        "forecast_1h": [1.0, 1.0, float("nan"), 0.0, 0.0, 1.0],
+    })
+
+    aligned, report = align_and_resample(df)
+
+    assert "forecast_1h" in aligned.columns
+    assert aligned.loc[0, "forecast_1h"] == 1.0
+    assert pd.isna(aligned.loc[1, "forecast_1h"])
+    assert pd.isna(aligned.loc[2, "forecast_1h"])
+    assert report["forecast_target_columns_preserved"] == ["forecast_1h"]

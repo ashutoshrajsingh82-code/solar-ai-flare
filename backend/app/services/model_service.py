@@ -14,6 +14,8 @@ from app.schemas.schemas import TrainRequest
 from ml.models.baseline import MODEL_BUILDERS
 from ml.models.registry import ModelRegistry, ModelRecord, new_model_id
 from ml.training.train import train_deep_model, TrainConfig
+from ml.training.validation import validate_classical_training_data
+from ml.training.eligibility import real_training_blockers
 from ml.features.windowing import build_windows, WindowConfig
 from ml.evaluation.metrics import evaluate_binary_forecast, multiclass_confusion_matrix
 
@@ -26,7 +28,9 @@ registry = ModelRegistry(settings.model_dir)
 
 
 def _training_status():
-    return "demo_only" if settings.data_mode == "demo" or pipeline_state.dataset_meta.get("source") == "demo" else "trained"
+    if settings.data_mode == "demo" or pipeline_state.dataset_meta.get("source") == "demo":
+        return "demo_only"
+    return "trained" if not real_training_blockers(pipeline_state.dataset_meta) else "untrained"
 
 
 def _channels_for_configuration(input_configuration: str):
@@ -48,6 +52,9 @@ def train_model(req: TrainRequest, progress_callback=None, stage_callback=None) 
 def _train_model_locked(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
     if not pipeline_state.is_ready_for_training():
         raise ValueError("Pipeline not ready. Run /api/preprocess before training.")
+    if _training_status() == "untrained":
+        blockers = real_training_blockers(pipeline_state.dataset_meta)
+        raise ValueError("Real-data training is blocked: " + " ".join(blockers))
 
     channel_cols, n_channels = _channels_for_configuration(req.input_configuration)
     model_id = new_model_id(req.model_type + "_" + req.input_configuration)
@@ -74,9 +81,11 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
     feat_df = pipeline_state.labeled_df
     feature_cols = pipeline_state.feature_columns
 
-    train_merged = train_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"] + FORECAST_HORIZON_COLS)
-    val_merged = val_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"] + FORECAST_HORIZON_COLS)
-    test_merged = test_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"] + FORECAST_HORIZON_COLS)
+    # Keep rows with unknown forecast labels; models fit each horizon on its known rows.
+    # Features and nowcast labels still must be present.
+    train_merged = train_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"])
+    val_merged = val_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"])
+    test_merged = test_df[["timestamp"]].merge(feat_df, on="timestamp", how="inner").dropna(subset=feature_cols + ["state"])
 
     if len(train_merged) < 10 or len(test_merged) < 5:
         raise ValueError("Not enough clean rows after feature engineering to train. Try a shorter cadence or more demo data.")
@@ -92,10 +101,15 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
 
     X_train = train_merged[use_cols].values
     X_test = test_merged[use_cols].values
-    y_now_train = train_merged["state"].values.astype(int)
-    y_now_test = test_merged["state"].values.astype(int)
+    y_now_train = train_merged["state"].values
+    y_now_test = test_merged["state"].values
     y_fc_train = train_merged[FORECAST_HORIZON_COLS].values
     y_fc_test = test_merged[FORECAST_HORIZON_COLS].values
+    validate_classical_training_data(
+        X_train, y_now_train, y_fc_train, X_test, y_now_test, y_fc_test,
+    )
+    y_now_train = y_now_train.astype(int)
+    y_now_test = y_now_test.astype(int)
 
     t0 = time.time()
     model = MODEL_BUILDERS[req.model_type]()
@@ -119,6 +133,7 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
     if stage_callback:
         stage_callback("saving artifacts")
     joblib.dump({"model": model, "feature_cols": use_cols}, checkpoint_path)
+    report_path = _persist_evaluation_report(model_id, metrics, use_cols)
 
     record = ModelRecord(
         model_id=model_id, name=f"{req.model_type} ({req.input_configuration})",
@@ -130,7 +145,9 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
         scaler_path=transformer_path, transformer_path=transformer_path, active=False, model_kind="classical",
         status=_training_status(),
         transformer_required=True,
-        params={"n_features": len(use_cols), "train_duration_sec": round(train_duration, 3)},
+        params={"n_features": len(use_cols), "train_duration_sec": round(train_duration, 3), "evaluation_report_path": report_path,
+                "target_definition": "pipeline_forecast_targets_v1", "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
+                "feature_schema_version": "rolling_features_v1"},
     )
     registry.register(record)
 
@@ -191,6 +208,7 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, prog
     if stage_callback:
         stage_callback("saving artifacts")
     torch.save({"state_dict": model.state_dict(), "model_type": req.model_type, "n_channels": n_channels}, checkpoint_path)
+    report_path = _persist_evaluation_report(model_id, metrics, channel_cols)
 
     record = ModelRecord(
         model_id=model_id, name=f"{req.model_type} ({req.input_configuration})",
@@ -202,7 +220,11 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, prog
         scaler_path=transformer_path, transformer_path=transformer_path, active=False, model_kind="deep",
         status=_training_status(),
         transformer_required=True,
-        params={"sequence_length": req.sequence_length, "epochs": req.epochs, "n_channels": n_channels},
+        params={"sequence_length": req.sequence_length, "epochs": req.epochs,
+                "n_channels": n_channels, "random_seed": train_cfg.random_seed,
+                "evaluation_report_path": report_path,
+                "target_definition": "pipeline_forecast_targets_v1", "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
+                "feature_schema_version": "rolling_features_v1"},
     )
     registry.register(record)
 
@@ -216,11 +238,36 @@ def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
     cm = multiclass_confusion_matrix(y_now_true, y_now_pred, n_classes=4)
 
     per_horizon = {}
-    for i, h in enumerate(["1h", "3h", "6h", "12h", "24h"]):
-        per_horizon[h] = evaluate_binary_forecast(y_fc_true[:, i], y_fc_prob[:, i])
+    y_fc_true = np.asarray(y_fc_true, dtype=float)
+    y_fc_prob = np.asarray(y_fc_prob, dtype=float)
+    if y_fc_true.shape != y_fc_prob.shape or y_fc_true.ndim != 2:
+        raise ValueError("Forecast targets and probabilities must be aligned 2D arrays.")
+    for i, h in enumerate(["1h", "3h", "6h", "12h", "24h"][:y_fc_true.shape[1]]):
+        known = np.isfinite(y_fc_true[:, i])
+        if not known.any():
+            per_horizon[h] = {
+                "sample_count": 0, "positive_count": 0, "negative_count": 0,
+                "positive_prevalence": None, "threshold": 0.5,
+                "tp": 0, "fp": 0, "tn": 0, "fn": 0,
+                "accuracy": None, "precision": None, "recall": None,
+                "pod": None, "f1": None, "false_alarm_rate": None, "far": None,
+                "tss": None, "hss": None, "roc_auc": None, "pr_auc": None,
+                "brier_score": None,
+                "undefined_metric_reasons": {
+                    "all": "No known labels in the chronological test split for this horizon."
+                },
+            }
+        else:
+            per_horizon[h] = evaluate_binary_forecast(
+                y_fc_true[known, i], y_fc_prob[known, i]
+            )
 
-    tss_values = [m["tss"] for m in per_horizon.values()]
-    hss_values = [m["hss"] for m in per_horizon.values()]
+    tss_values = [m["tss"] for m in per_horizon.values() if m["tss"] is not None]
+    hss_values = [m["hss"] for m in per_horizon.values() if m["hss"] is not None]
+    precision_values = [m["precision"] for m in per_horizon.values() if m["precision"] is not None]
+    recall_values = [m["recall"] for m in per_horizon.values() if m["recall"] is not None]
+    f1_values = [m["f1"] for m in per_horizon.values() if m["f1"] is not None]
+    far_values = [m["far"] for m in per_horizon.values() if m["far"] is not None]
 
     return {
         "evaluation_split": "chronological_test",
@@ -234,12 +281,54 @@ def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
         "hss_mean": float(np.mean(hss_values)) if hss_values else None,
         "tss": float(np.mean(tss_values)) if tss_values else None,
         "hss": float(np.mean(hss_values)) if hss_values else None,
-        "precision": float(np.mean([m["precision"] for m in per_horizon.values()])),
-        "recall": float(np.mean([m["recall"] for m in per_horizon.values()])),
-        "f1": float(np.mean([m["f1"] for m in per_horizon.values()])),
-        "false_alarm_rate": float(np.mean([m["false_alarm_rate"] for m in per_horizon.values()])),
+        "precision": float(np.mean(precision_values)) if precision_values else None,
+        "recall": float(np.mean(recall_values)) if recall_values else None,
+        "f1": float(np.mean(f1_values)) if f1_values else None,
+        "false_alarm_rate": float(np.mean(far_values)) if far_values else None,
         "pr_auc": float(np.mean([m["pr_auc"] for m in per_horizon.values() if m["pr_auc"] is not None])) if any(m["pr_auc"] is not None for m in per_horizon.values()) else None,
     }
+
+
+def _persist_evaluation_report(model_id: str, metrics: dict, feature_schema: list[str]) -> str:
+    """Persist the actual test-split evaluation alongside registered model artifacts."""
+    def period(frame):
+        if frame is None or frame.empty or "timestamp" not in frame:
+            return {"start": None, "end": None, "samples": 0}
+        stamps = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce").dropna()
+        return {"start": stamps.min().isoformat() if len(stamps) else None,
+                "end": stamps.max().isoformat() if len(stamps) else None,
+                "samples": int(len(frame))}
+
+    meta = pipeline_state.dataset_meta or {}
+    report = {
+        "report_version": 1,
+        "model_id": model_id,
+        "model_status": _training_status(),
+        "evaluation_timestamp_utc": pd.Timestamp.now(tz="UTC").isoformat(),
+        "evaluation_split": "chronological_test",
+        "decision_threshold": 0.5,
+        "threshold_selection": "fixed a priori; no holdout tuning",
+        "label_definition": "Existing pipeline forecast targets; five horizons (1h, 3h, 6h, 12h, 24h).",
+        "feature_schema": list(feature_schema),
+        "data_provenance": meta,
+        "periods": {"train": period(pipeline_state.train_df),
+                    "validation": period(pipeline_state.val_df),
+                    "holdout": period(pipeline_state.test_df)},
+        "metrics": metrics,
+        "scientific_limitations": [
+            "Demo results are not observational validation." if _training_status() == "demo_only" else
+            "Observational provenance evidence must be reviewed with source files and product documentation."
+        ],
+    }
+    os.makedirs(settings.model_dir, exist_ok=True)
+    report_path = os.path.join(settings.model_dir, f"{model_id}.evaluation.json")
+    tmp_path = report_path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as handle:
+        json.dump(report, handle, indent=2, default=str, allow_nan=False)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp_path, report_path)
+    return report_path
 _BASELINE_SEEDS = [
     ("climatology", "Climatology No-Skill Reference", {"predicts": "train-split class priors and flare rates"}),
     ("flux_rule", "Flux Threshold Rule (Level + Trend)", {"max_depth": 3, "features": ["flux_level", "flux_slope_5m"]}),
