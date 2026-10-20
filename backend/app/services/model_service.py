@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import tempfile
 import numpy as np
 import pandas as pd
 import joblib
@@ -9,6 +10,7 @@ from typing import Optional
 
 from app.core.config import settings
 from app.services.pipeline_state import pipeline_state
+from app.services.artifact_catalog import catalog_model_artifacts, verify_model_artifact_set
 from app.schemas.schemas import TrainRequest
 
 from ml.models.baseline import MODEL_BUILDERS
@@ -27,6 +29,22 @@ FORECAST_HORIZON_COLS = ["forecast_1h", "forecast_3h", "forecast_6h", "forecast_
 registry = ModelRegistry(settings.model_dir)
 
 
+def _atomic_save(path, writer):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".model-artifact-", suffix=".tmp", dir=os.path.dirname(os.path.abspath(path)))
+    os.close(fd)
+    try:
+        writer(temp_path)
+        if not os.path.isfile(temp_path) or os.path.getsize(temp_path) == 0:
+            raise OSError("Model artifact writer produced an empty file")
+        with open(temp_path, "rb") as stream:
+            os.fsync(stream.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
 def _training_status():
     if settings.data_mode == "demo" or pipeline_state.dataset_meta.get("source") == "demo":
         return "demo_only"
@@ -41,15 +59,15 @@ def _channels_for_configuration(input_configuration: str):
     return ["solexs_flux_scaled", "helios_flux_scaled"], 2
 
 
-def train_model(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
+def train_model(req: TrainRequest, progress_callback=None, stage_callback=None, job_id=None) -> dict:
     with pipeline_state.operation_lock:
-        result = _train_model_locked(req, progress_callback, stage_callback)
+        result = _train_model_locked(req, progress_callback, stage_callback, job_id=job_id)
         if stage_callback:
             stage_callback("completed")
         return result
 
 
-def _train_model_locked(req: TrainRequest, progress_callback=None, stage_callback=None) -> dict:
+def _train_model_locked(req: TrainRequest, progress_callback=None, stage_callback=None, job_id=None) -> dict:
     if not pipeline_state.is_ready_for_training():
         raise ValueError("Pipeline not ready. Run /api/preprocess before training.")
     if _training_status() == "untrained":
@@ -63,16 +81,16 @@ def _train_model_locked(req: TrainRequest, progress_callback=None, stage_callbac
         stage_callback("validating_input")
 
     if req.model_type in CLASSICAL_MODEL_TYPES:
-        result = _train_classical(req, channel_cols, model_id, stage_callback)
+        result = _train_classical(req, channel_cols, model_id, stage_callback, job_id=job_id)
     elif req.model_type in DEEP_MODEL_TYPES:
-        result = _train_deep(req, channel_cols, n_channels, model_id, progress_callback, stage_callback)
+        result = _train_deep(req, channel_cols, n_channels, model_id, progress_callback, stage_callback, job_id=job_id)
     else:
         raise ValueError(f"Unknown model_type '{req.model_type}'")
 
     return result
 
 
-def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callback=None) -> dict:
+def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callback=None, job_id=None) -> dict:
     train_df = pipeline_state.train_df.copy()
     val_df = pipeline_state.val_df.copy()
     test_df = pipeline_state.test_df.copy()
@@ -128,12 +146,18 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
 
     os.makedirs(settings.model_dir, exist_ok=True)
     transformer_path = os.path.join(settings.model_dir, f"{model_id}.transformer.joblib")
-    joblib.dump(pipeline_state.transformer, transformer_path)
+    _atomic_save(transformer_path, lambda temp: joblib.dump(pipeline_state.transformer, temp))
     checkpoint_path = os.path.join(settings.model_dir, f"{model_id}.joblib")
     if stage_callback:
         stage_callback("saving artifacts")
-    joblib.dump({"model": model, "feature_cols": use_cols}, checkpoint_path)
+    _atomic_save(checkpoint_path, lambda temp: joblib.dump({"model": model, "feature_cols": use_cols}, temp))
     report_path = _persist_evaluation_report(model_id, metrics, use_cols)
+    compatibility = {"target_definition": "pipeline_forecast_targets_v1",
+                     "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
+                     "feature_schema_version": "rolling_features_v1"}
+    artifact_refs = catalog_model_artifacts(model_id, settings.model_dir,
+        [("model", checkpoint_path, "joblib"), ("preprocessor", transformer_path, "joblib"),
+         ("evaluation", report_path, "json")], compatibility, job_id=job_id)
 
     record = ModelRecord(
         model_id=model_id, name=f"{req.model_type} ({req.input_configuration})",
@@ -147,14 +171,15 @@ def _train_classical(req: TrainRequest, channel_cols, model_id: str, stage_callb
         transformer_required=True,
         params={"n_features": len(use_cols), "train_duration_sec": round(train_duration, 3), "evaluation_report_path": report_path,
                 "target_definition": "pipeline_forecast_targets_v1", "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
-                "feature_schema_version": "rolling_features_v1"},
+                "feature_schema_version": "rolling_features_v1", "artifact_ids": [a["artifact_id"] for a in artifact_refs]},
     )
     registry.register(record)
 
-    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": [], "input_configuration": req.input_configuration}
+    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": [],
+            "input_configuration": req.input_configuration, "artifact_refs": artifact_refs}
 
 
-def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, progress_callback=None, stage_callback=None) -> dict:
+def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, progress_callback=None, stage_callback=None, job_id=None) -> dict:
     win_cfg = WindowConfig(sequence_length=req.sequence_length, channel_cols=channel_cols)
 
     X_train, y_now_train, y_fc_train, _ = build_windows(pipeline_state.train_df.merge(
@@ -203,12 +228,19 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, prog
 
     os.makedirs(settings.model_dir, exist_ok=True)
     transformer_path = os.path.join(settings.model_dir, f"{model_id}.transformer.joblib")
-    joblib.dump(pipeline_state.transformer, transformer_path)
+    _atomic_save(transformer_path, lambda temp: joblib.dump(pipeline_state.transformer, temp))
     checkpoint_path = os.path.join(settings.model_dir, f"{model_id}.pt")
     if stage_callback:
         stage_callback("saving artifacts")
-    torch.save({"state_dict": model.state_dict(), "model_type": req.model_type, "n_channels": n_channels}, checkpoint_path)
+    _atomic_save(checkpoint_path, lambda temp: torch.save(
+        {"state_dict": model.state_dict(), "model_type": req.model_type, "n_channels": n_channels}, temp))
     report_path = _persist_evaluation_report(model_id, metrics, channel_cols)
+    compatibility = {"target_definition": "pipeline_forecast_targets_v1",
+                     "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
+                     "feature_schema_version": "rolling_features_v1"}
+    artifact_refs = catalog_model_artifacts(model_id, settings.model_dir,
+        [("model", checkpoint_path, "torch"), ("preprocessor", transformer_path, "joblib"),
+         ("evaluation", report_path, "json")], compatibility, job_id=job_id)
 
     record = ModelRecord(
         model_id=model_id, name=f"{req.model_type} ({req.input_configuration})",
@@ -224,11 +256,12 @@ def _train_deep(req: TrainRequest, channel_cols, n_channels, model_id: str, prog
                 "n_channels": n_channels, "random_seed": train_cfg.random_seed,
                 "evaluation_report_path": report_path,
                 "target_definition": "pipeline_forecast_targets_v1", "forecast_horizons": ["1h", "3h", "6h", "12h", "24h"],
-                "feature_schema_version": "rolling_features_v1"},
+                "feature_schema_version": "rolling_features_v1", "artifact_ids": [a["artifact_id"] for a in artifact_refs]},
     )
     registry.register(record)
 
-    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": history, "input_configuration": req.input_configuration}
+    return {"model_id": model_id, "status": _training_status(), "metrics": metrics, "history": history,
+            "input_configuration": req.input_configuration, "artifact_refs": artifact_refs}
 
 
 def _compute_full_metrics(y_now_true, y_now_pred, y_fc_true, y_fc_prob) -> dict:
@@ -377,6 +410,9 @@ def get_model_metrics(model_id: str):
 
 
 def set_active_model(model_id: str):
+    rec = registry.get(model_id)
+    if rec and rec.get("status") in {"trained", "demo_only"}:
+        verify_model_artifact_set(rec, settings.model_dir)
     registry.set_active(model_id)
     return registry.get(model_id)
 

@@ -9,6 +9,7 @@ import os
 import json
 import time
 import tempfile
+import uuid
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, Any
 
@@ -152,4 +153,4 @@ class ModelRegistry:
 
 
 def new_model_id(architecture: str) -> str:
-    return f"{architecture}_{int(time.time())}"
+    return f"{architecture}_{int(time.time())}_{uuid.uuid4().hex[:8]}"

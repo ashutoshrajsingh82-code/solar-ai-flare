@@ -1,35 +1,17 @@
-import logging
-import traceback
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
 from app.schemas.schemas import PreprocessRequest
-from app.services import preprocess_service
 from app.services.pipeline_state import pipeline_state
 from app.services.job_manager import preprocess_jobs
 from app.core.config import settings
 
 router = APIRouter(prefix="/api", tags=["preprocess"])
-logger = logging.getLogger("solar-flare-ai")
-
-
-def _run_preprocess_job(job_id: str, req: PreprocessRequest):
-    """Runs in a background thread after the POST /preprocess response is sent."""
-    preprocess_jobs.set_running(job_id)
-    try:
-        result = preprocess_service.run_full_pipeline(
-            req,
-            stage_callback=lambda stage: preprocess_jobs.set_stage(job_id, stage),
-        )
-        preprocess_jobs.set_done(job_id, result)
-    except ValueError as e:
-        preprocess_jobs.set_failed(job_id, str(e))
-    except Exception as e:
-        logger.error("Preprocessing job %s crashed:\n%s", job_id, traceback.format_exc())
-        preprocess_jobs.set_failed(job_id, f"Preprocessing failed: {e}")
 
 
 @router.post("/preprocess")
-def run_preprocess(req: PreprocessRequest, background_tasks: BackgroundTasks):
+def run_preprocess(req: PreprocessRequest, background_tasks: BackgroundTasks,
+                   idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key", max_length=128)] = None):
     """Kicks off the full clean -> align -> transform -> feature -> label
     pipeline in the background and returns immediately with a job_id. Poll
     GET /api/preprocess/{job_id}/status for progress/result. Cleaning +
@@ -41,9 +23,15 @@ def run_preprocess(req: PreprocessRequest, background_tasks: BackgroundTasks):
         detail = "No dataset loaded. Upload a local real-data product; real mode does not fall back to demo data." \
             if settings.data_mode == "real" else "No dataset loaded. Load demo data or upload a dataset first."
         raise HTTPException(status_code=422, detail=detail)
-    job_id = preprocess_jobs.create()
-    background_tasks.add_task(_run_preprocess_job, job_id, req)
-    return {"job_id": job_id, "status": "pending"}
+    try:
+        input_config = {**req.model_dump(), "_pipeline_fingerprint": pipeline_state.snapshot_fingerprint()}
+        job_id, created = preprocess_jobs.create(input_config=input_config, idempotency_key=idempotency_key,
+                                                 return_created=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    # The separate database-polling worker claims queued work. The API request
+    # only persists the job and returns its stable identifier.
+    return {"job_id": job_id, "status": preprocess_jobs.to_dict(job_id)["status"]}
 
 
 @router.get("/preprocess/{job_id}/status")

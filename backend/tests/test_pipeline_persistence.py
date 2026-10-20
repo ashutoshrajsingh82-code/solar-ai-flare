@@ -14,11 +14,13 @@ def test_pipeline_frames_metadata_transformer_and_splits_restore(tmp_path):
     state.cadence_seconds = 60
     state.feature_columns = ["feature_a"]
     state.set_stage("raw", raw, {"input_rows": 4, "output_rows": 4, "warnings": []}, 0.01)
+    original_fingerprint = state.snapshot_fingerprint()
     state.train_df, state.val_df, state.test_df = raw.iloc[:2], raw.iloc[2:3], raw.iloc[3:]
     state.transformer = FluxTransformer().fit(raw.iloc[:2])
     state.transformed_df = state.transformer.transform(raw)
     state.set_stage("transformed", state.transformed_df, {"input_rows": 4, "output_rows": 4, "warnings": []}, 0.01)
     state.set_stage("featured", state.transformed_df.copy(), {"input_rows": 4, "output_rows": 4, "warnings": []}, 0.01)
+    assert state.snapshot_fingerprint() != original_fingerprint
     state.set_stage("labeled", state.transformed_df.copy(), {"input_rows": 4, "output_rows": 4, "warnings": []}, 0.01)
     state.persist()
 
@@ -30,6 +32,7 @@ def test_pipeline_frames_metadata_transformer_and_splits_restore(tmp_path):
     assert len(restored.raw_df) == 4
     assert len(restored.train_df) == 2 and len(restored.val_df) == 1 and len(restored.test_df) == 1
     assert restored.transformer.fitted
+    assert restored.snapshot_fingerprint() == state.snapshot_fingerprint()
     assert restored.is_ready_for_training()
     assert restored.transformer.transform(raw)["solexs_flux_scaled"].tolist() == state.transformer.transform(raw)["solexs_flux_scaled"].tolist()
 

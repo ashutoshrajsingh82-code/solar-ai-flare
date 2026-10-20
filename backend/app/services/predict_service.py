@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
+from app.core.config import settings
 from app.services.pipeline_state import pipeline_state
+from app.services.artifact_catalog import verify_model_artifact_set
 from app.services.model_service import registry
 from ml.models.deep_models import DEEP_MODEL_BUILDERS
 from ml.inference.predictor import _format_prediction, risk_level_from_probability
@@ -51,11 +53,15 @@ def resolve_model(model_id: Optional[str] = None) -> dict:
             raise KeyError(f"Model {model_id} not found in registry.")
         if rec.get("status") == "untrained":
             raise ValueError(f"Model {model_id} is untrained and unavailable for prediction.")
+        if rec.get("status") in {"trained", "demo_only"}:
+            verify_model_artifact_set(rec, settings.model_dir)
         registry.validate_artifacts(model_id, rec)
         return rec
     rec = registry.get_active()
     if not rec:
         raise ValueError("No active trained model is available. Train a compatible model and activate it first.")
+    if rec.get("status") in {"trained", "demo_only"}:
+        verify_model_artifact_set(rec, settings.model_dir)
     registry.validate_artifacts(rec["model_id"], rec)
     return rec
 

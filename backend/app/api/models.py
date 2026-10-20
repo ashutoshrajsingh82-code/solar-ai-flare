@@ -1,60 +1,37 @@
 
-import logging
-import traceback
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
 
 from app.schemas.schemas import TrainRequest, ModelSelectRequest
 from app.services import model_service
 from app.services.job_manager import training_jobs
-
-logger = logging.getLogger("solar-flare-ai")
+from app.services.pipeline_state import pipeline_state
 
 router = APIRouter(prefix="/api/models", tags=["models"])
-
-
-def _run_training_job(job_id: str, req: TrainRequest):
-    """Run model training as a background task."""
-    training_jobs.set_running(job_id)
-
-    try:
-        result = model_service.train_model(
-            req,
-            progress_callback=lambda record: training_jobs.add_progress(job_id, record),
-            stage_callback=lambda stage: training_jobs.set_stage(job_id, stage),
-        )
-
-        training_jobs.set_done(job_id, result)
-
-    except ValueError as e:
-        training_jobs.set_failed(job_id, str(e))
-
-    except Exception as e:
-        logger.error(
-            "Training job %s crashed:\n%s",
-            job_id,
-            traceback.format_exc(),
-        )
-        training_jobs.set_failed(job_id, f"Training failed: {e}")
 
 
 @router.post("/train")
 def train(
     req: TrainRequest,
     background_tasks: BackgroundTasks,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key", max_length=128)] = None,
 ):
     """Start model training in the background."""
-    job_id = training_jobs.create()
+    try:
+        input_config = {**req.model_dump(), "_pipeline_fingerprint": pipeline_state.snapshot_fingerprint()}
+        job_id, created = training_jobs.create(input_config=input_config, idempotency_key=idempotency_key,
+                                               return_created=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
 
-    background_tasks.add_task(
-        _run_training_job,
-        job_id,
-        req,
-    )
+    # Execution is performed by app.worker, not by the API process. Jobs remain
+    # durable and queued if the worker is temporarily unavailable.
+    job_status = training_jobs.to_dict(job_id)["status"]
 
     return {
         "job_id": job_id,
-        "status": "pending",
+        "status": job_status,
     }
 
 

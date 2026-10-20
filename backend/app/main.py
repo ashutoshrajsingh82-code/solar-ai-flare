@@ -10,8 +10,7 @@ import logging
 
 from app.core.config import settings
 from app.database.db import init_db, SessionLocal
-from app.services.job_manager import training_jobs, preprocess_jobs
-from app.api import health, data, preprocess, models, predict, alerts, simulation, experiments, dashboard, system
+from app.api import health, data, preprocess, models, predict, alerts, simulation, experiments, dashboard, system, jobs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("solar-flare-ai")
@@ -32,7 +31,7 @@ app.add_middleware(
 )
 
 for router in [health.router, data.router, preprocess.router, models.router, predict.router,
-               alerts.router, simulation.router, experiments.router, dashboard.router, system.router]:
+               alerts.router, simulation.router, experiments.router, dashboard.router, system.router, jobs.router]:
     app.include_router(router)
 
 
@@ -40,9 +39,6 @@ for router in [health.router, data.router, preprocess.router, models.router, pre
 def on_startup():
     init_db()
     logger.info("Database initialized")
-    training_jobs.recover_interrupted()
-    preprocess_jobs.recover_interrupted()
-
     # DEMO MODE bootstrap: auto-load synthetic data + seed alerts so the app is usable immediately.
     if settings.data_mode == "demo":
         try:

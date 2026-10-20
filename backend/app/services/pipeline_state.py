@@ -219,6 +219,16 @@ class PipelineState:
         raise ValueError(f"Unsupported pipeline artifact format for {key}")
 
     def restore(self):
+        with self._lock:
+            for name in STATE_FRAMES:
+                setattr(self, f"{name}_df", None)
+            self.dataset_meta = {}
+            self.stage_reports = {}
+            self.feature_columns = []
+            self.transformer = None
+            self.cadence_seconds = 60
+            self._artifacts = {}
+            self._artifact_errors = {}
         if not self.manifest_path.exists():
             return
         try:
@@ -255,6 +265,13 @@ class PipelineState:
             except Exception as exc:
                 logger.exception("Pipeline artifact %s could not be restored", key)
                 self._artifact_errors[key] = _artifact_error(exc)
+
+    def snapshot_fingerprint(self):
+        """Identify the persisted dataset/pipeline snapshot a queued job depends on."""
+        with self._lock:
+            payload = json.dumps({"dataset_meta": _json_safe(self.dataset_meta),
+                                  "artifacts": self._artifacts}, sort_keys=True, separators=(",", ":"))
+            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def reset_for_dataset(self):
         """Clear prior derived state before loading a different source dataset."""

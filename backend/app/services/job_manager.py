@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from sqlalchemy.exc import IntegrityError
 
 from app.database.db import SessionLocal
 from app.database.models import BackgroundJobRecord
@@ -64,7 +65,8 @@ def _epoch(value):
 
 class Job:
     def __init__(self, job_id: str, status="pending", result=None, error=None, stage="", progress=None,
-                 created_at=None, updated_at=None, started_at=None, finished_at=None):
+                 created_at=None, updated_at=None, started_at=None, finished_at=None,
+                 input_config=None, artifact_refs=None, error_category=None, retry_count=0, worker_id=None):
         self.job_id = job_id
         self.status = status
         self.result = result
@@ -76,6 +78,11 @@ class Job:
         self.updated_at = updated_at if updated_at is not None else self.created_at
         self.started_at = started_at
         self.finished_at = finished_at
+        self.input_config = input_config or {}
+        self.artifact_refs = artifact_refs or []
+        self.error_category = error_category
+        self.retry_count = retry_count
+        self.worker_id = worker_id
 
 
 class JobManager:
@@ -87,7 +94,8 @@ class JobManager:
 
     def _to_job(self, rec):
         return Job(rec.job_id, rec.status, rec.result, rec.error, rec.stage, rec.progress or [],
-                   _epoch(rec.created_at), _epoch(rec.updated_at), _epoch(rec.started_at), _epoch(rec.finished_at))
+                   _epoch(rec.created_at), _epoch(rec.updated_at), _epoch(rec.started_at), _epoch(rec.finished_at),
+                   rec.input_config, rec.artifact_refs, rec.error_category, rec.retry_count, rec.worker_id)
 
     def _db_update(self, job_id: str, update):
         db = self._session_factory()
@@ -107,10 +115,21 @@ class JobManager:
         finally:
             db.close()
 
-    def create(self) -> str:
+    def create(self, input_config=None, idempotency_key=None, return_created=False):
         with self._lock:
             db = self._session_factory()
             try:
+                if idempotency_key:
+                    if len(idempotency_key) > 128:
+                        raise ValueError("Idempotency key must be at most 128 characters")
+                    existing = db.query(BackgroundJobRecord).filter_by(
+                        job_type=self.job_type, idempotency_key=idempotency_key
+                    ).one_or_none()
+                    if existing:
+                        normalized = _json_safe(input_config or {})
+                        if existing.input_config != normalized:
+                            raise ValueError("Idempotency key was already used with different job configuration")
+                        return (existing.job_id, False) if return_created else existing.job_id
                 for _ in range(5):
                     job_id = uuid.uuid4().hex
                     if db.query(BackgroundJobRecord.id).filter_by(job_id=job_id).first() is None:
@@ -119,13 +138,26 @@ class JobManager:
                     raise RuntimeError("Could not allocate a unique background job ID")
                 now = _utc_now()
                 rec = BackgroundJobRecord(job_id=job_id, job_type=self.job_type, status="pending", stage="",
-                                          progress=[], created_at=now, updated_at=now)
+                                          progress=[], created_at=now, updated_at=now, schema_version=1,
+                                          input_config=_json_safe(input_config or {}), artifact_refs=[],
+                                          retry_count=0, idempotency_key=idempotency_key)
                 db.add(rec)
                 db.commit()
                 db.refresh(rec)
                 self._jobs[job_id] = self._to_job(rec)
                 logger.info("Created %s job %s", self.job_type, job_id)
-                return job_id
+                return (job_id, True) if return_created else job_id
+            except IntegrityError:
+                db.rollback()
+                existing = None
+                if idempotency_key:
+                    existing = db.query(BackgroundJobRecord).filter_by(
+                        job_type=self.job_type, idempotency_key=idempotency_key
+                    ).one_or_none()
+                if existing and existing.input_config == _json_safe(input_config or {}):
+                    return (existing.job_id, False) if return_created else existing.job_id
+                logger.exception("Could not persist creation of %s job", self.job_type)
+                raise
             except Exception:
                 db.rollback()
                 logger.exception("Could not persist creation of %s job", self.job_type)
@@ -138,6 +170,12 @@ class JobManager:
             safe = _json_safe(kwargs)
             now = _utc_now()
             def apply(rec):
+                allowed = {"pending": {"running", "failed"}, "running": {"done", "failed"},
+                           "done": set(), "failed": set()}
+                if "status" in safe and safe["status"] not in allowed.get(rec.status, set()):
+                    raise ValueError(f"Invalid {self.job_type} job transition: {rec.status} -> {safe['status']}")
+                if "status" not in safe and rec.status in {"done", "failed"}:
+                    raise ValueError(f"Cannot update terminal {self.job_type} job {job_id}")
                 for key, value in safe.items():
                     setattr(rec, key, value)
                 if safe.get("status") in {"done", "failed"}:
@@ -154,13 +192,14 @@ class JobManager:
             return rec
 
     def set_running(self, job_id: str):
-        self._update(job_id, status="running")
+        self._update(job_id, status="running", worker_id=f"pid-{__import__('os').getpid()}-{threading.get_ident()}")
 
-    def set_done(self, job_id: str, result: dict):
-        self._update(job_id, status="done", result=_json_safe(result), error=None)
+    def set_done(self, job_id: str, result: dict, artifact_refs=None):
+        self._update(job_id, status="done", result=_json_safe(result), error=None, error_category=None,
+                     artifact_refs=artifact_refs or [])
 
-    def set_failed(self, job_id: str, error: str):
-        self._update(job_id, status="failed", error=str(error))
+    def set_failed(self, job_id: str, error: str, category="permanent"):
+        self._update(job_id, status="failed", error=_public_error(error), error_category=category)
 
     def set_stage(self, job_id: str, stage: str):
         self._update(job_id, stage=str(stage))
@@ -169,6 +208,8 @@ class JobManager:
         with self._lock:
             safe = _json_safe(record)
             def apply(rec):
+                if rec.status in {"done", "failed"}:
+                    raise ValueError(f"Cannot update terminal {self.job_type} job {job_id}")
                 rec.progress = list(rec.progress or []) + [safe]
             result = self._db_update(job_id, apply)
             if result is not None:
@@ -198,26 +239,72 @@ class JobManager:
         job = self.get(job_id)
         if not job:
             return None
+        lifecycle = {"pending": "queued", "running": "running", "done": "succeeded", "failed": "failed"}
         return {
             "job_id": job.job_id, "status": job.status, "result": job.result,
+            "lifecycle_state": lifecycle.get(job.status, job.status),
             "error": _public_error(job.error), "stage": job.stage, "progress": list(job.progress),
             "created_at": job.created_at, "updated_at": job.updated_at,
             "started_at": job.started_at, "finished_at": job.finished_at,
+            "input_config": job.input_config, "artifact_refs": list(job.artifact_refs),
+            "error_category": job.error_category, "retry_count": job.retry_count,
+            "worker_id": job.worker_id,
         }
 
+    def list(self, status=None, offset=0, limit=50):
+        if offset < 0 or not 1 <= limit <= 100:
+            raise ValueError("offset must be nonnegative and limit must be between 1 and 100")
+        if status is not None and status not in {"pending", "running", "done", "failed"}:
+            raise ValueError("Unknown job status")
+        db = self._session_factory()
+        try:
+            query = db.query(BackgroundJobRecord).filter_by(job_type=self.job_type)
+            if status:
+                query = query.filter_by(status=status)
+            rows = query.order_by(BackgroundJobRecord.created_at.desc()).offset(offset).limit(limit).all()
+            return [self.to_dict(row.job_id) for row in rows]
+        finally:
+            db.close()
+
+    def claim_next(self, worker_id):
+        """Atomically claim the oldest queued job; safe for concurrent DB workers."""
+        db = self._session_factory()
+        now = _utc_now()
+        try:
+            query = db.query(BackgroundJobRecord).filter_by(job_type=self.job_type, status="pending")
+            rec = query.order_by(BackgroundJobRecord.created_at.asc()).first()
+            if rec is None:
+                return None
+            changed = db.query(BackgroundJobRecord).filter_by(
+                id=rec.id, status="pending"
+            ).update({"status": "running", "worker_id": worker_id,
+                      "started_at": now, "updated_at": now}, synchronize_session=False)
+            if changed != 1:
+                db.rollback()
+                return None
+            db.commit()
+            return self.to_dict(rec.job_id)
+        except Exception:
+            db.rollback()
+            logger.exception("Could not claim queued %s job", self.job_type)
+            raise
+        finally:
+            db.close()
+
     def recover_interrupted(self):
-        """Fail pending/running jobs after restart; computation is not resumed."""
+        """Fail jobs left running after restart; queued jobs remain available to a worker."""
         db = self._session_factory()
         now = _utc_now()
         try:
             records = db.query(BackgroundJobRecord).filter(
                 BackgroundJobRecord.job_type == self.job_type,
-                BackgroundJobRecord.status.in_(["pending", "running"]),
+                BackgroundJobRecord.status == "running",
             ).all()
             for rec in records:
                 old_status = rec.status
                 rec.status = "failed"
                 rec.error = f"Process restarted before {self.job_type} job completed (was {old_status}); computation was not resumed."
+                rec.error_category = "interrupted"
                 rec.stage = "interrupted"
                 rec.finished_at = now
                 rec.updated_at = now

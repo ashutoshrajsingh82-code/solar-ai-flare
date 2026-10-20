@@ -1,5 +1,5 @@
 import datetime as dt
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, UniqueConstraint
 from app.database.db import Base
 
 
@@ -70,6 +70,7 @@ class InferenceRecord(Base):
 
 class BackgroundJobRecord(Base):
     __tablename__ = "background_jobs"
+    __table_args__ = (UniqueConstraint("job_type", "idempotency_key", name="uq_background_job_type_idempotency_key"),)
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(String(64), unique=True, nullable=False, index=True)
     job_type = Column(String(32), nullable=False, index=True)
@@ -82,3 +83,27 @@ class BackgroundJobRecord(Base):
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow, nullable=False)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
+    schema_version = Column(Integer, nullable=False, default=1)
+    input_config = Column(JSON, nullable=True)
+    artifact_refs = Column(JSON, nullable=False, default=list)
+    error_category = Column(String(64), nullable=True)
+    retry_count = Column(Integer, nullable=False, default=0)
+    worker_id = Column(String(128), nullable=True)
+    idempotency_key = Column(String(128), nullable=True)
+
+
+class ArtifactRecord(Base):
+    """Metadata catalog for locally published model and evaluation artifacts."""
+    __tablename__ = "artifacts"
+    id = Column(Integer, primary_key=True, index=True)
+    artifact_id = Column(String(128), unique=True, nullable=False, index=True)
+    job_id = Column(String(64), nullable=True, index=True)
+    model_id = Column(String(128), nullable=True, index=True)
+    artifact_type = Column(String(64), nullable=False)
+    format = Column(String(32), nullable=False)
+    version = Column(String(64), nullable=False)
+    storage_key = Column(String(512), nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    compatibility = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
