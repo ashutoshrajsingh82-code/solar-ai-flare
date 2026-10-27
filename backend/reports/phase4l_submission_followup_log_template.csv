@@ -1,3 +1,0 @@
-request_id,status,blocker_ids,rule_ids,draft_artifact,draft_sha256,official_recipient_or_channel,recipient_verified,submission_datetime_timezone,submission_evidence,acknowledgement_datetime_timezone,response_datetime_timezone,response_artifact,response_sha256,followup_history,adjudication_status,adjudication_rationale,audit_history
-REQ-SLX-001,REQUEST_PREPARED,B-SLX-GTI-001|B-SLX-PROV-002|B-SLX-CAL-003,R03|R05|R06,phase4l_solexs_inquiry_draft_v2.md,,,,,,,,,,,NOT_STARTED,No response received,2026-10-25 created; not sent
-REQ-HL-002,REQUEST_PREPARED,B-HL-TIME-004|B-HL-QUALITY-005|B-HL-VERSION-006,R07|R08|R13|R14,phase4l_hel1os_inquiry_draft_v2.md,,,,,,,,,,,NOT_STARTED,No response received,2026-10-25 created; not sent

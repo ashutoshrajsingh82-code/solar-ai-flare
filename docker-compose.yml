@@ -1,81 +1,28 @@
-services:
-  migrate:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: ["python", "-m", "app.migrate"]
-    environment:
-      APP_ENV: production
-      AUTO_MIGRATE: "false"
-      DATABASE_URL: sqlite:////app/data/solarflare.db
-    volumes:
-      - solarflare-data:/app/data
-    restart: "no"
+version: '3.8'
 
+services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
     environment:
-      APP_ENV: production
-      AUTO_MIGRATE: "false"
-      DATA_MODE: ${DATA_MODE:-demo}
-      DATABASE_URL: sqlite:////app/data/solarflare.db
-      MODEL_DIR: /app/ml/saved_models
-      PIPELINE_ARTIFACT_DIR: /app/artifacts/pipeline
-      UPLOAD_STORAGE_DIR: /app/data/uploads
-      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-52428800}
-      MAX_UPLOAD_ROWS: ${MAX_UPLOAD_ROWS:-1000000}
-      MAX_UPLOAD_COLUMNS: ${MAX_UPLOAD_COLUMNS:-64}
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      - APP_ENV=development
+      - DATA_MODE=demo
+      - DATABASE_URL=sqlite:///./solarflare.db
+      - MODEL_DIR=./ml/saved_models
     volumes:
-      - solarflare-data:/app/data
-      - solarflare-models:/app/ml/saved_models
-      - solarflare-artifacts:/app/artifacts
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    expose:
-      - "8000"
+      - ./backend/solarflare.db:/app/solarflare.db
+      - ./backend/ml/saved_models:/app/ml/saved_models
     restart: unless-stopped
-    stop_grace_period: 30s
-
-  worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: ["python", "-m", "app.worker"]
-    environment:
-      APP_ENV: production
-      AUTO_MIGRATE: "false"
-      DATA_MODE: ${DATA_MODE:-demo}
-      DATABASE_URL: sqlite:////app/data/solarflare.db
-      MODEL_DIR: /app/ml/saved_models
-      PIPELINE_ARTIFACT_DIR: /app/artifacts/pipeline
-      UPLOAD_STORAGE_DIR: /app/data/uploads
-    volumes:
-      - solarflare-data:/app/data
-      - solarflare-models:/app/ml/saved_models
-      - solarflare-artifacts:/app/artifacts
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    restart: unless-stopped
-    stop_grace_period: 30s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT:-5173}:8080"
+      - "5173:5173"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     restart: unless-stopped
-    stop_grace_period: 15s
-
-volumes:
-  solarflare-data:
-  solarflare-models:
-  solarflare-artifacts:

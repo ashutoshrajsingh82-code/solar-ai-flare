@@ -83,8 +83,8 @@ def test_predict_single_window():
 
     res = client.post("/api/predict", json={"rows": sample_rows})
 
-    # The server explicitly reports that a usable trained model is unavailable.
-    assert res.status_code == 503, res.text
+    # Phase 1 must not generate predictions without a usable model.
+    assert res.status_code == 422, res.text
 
     body = res.json()
     assert "detail" in body

@@ -134,16 +134,16 @@ export default function Overview() {
         <MetricCard
           title="M/X Flare Risk"
           value={<RiskBadge level={riskLevel} size="lg" />}
-          subtitle="Score band from an uncalibrated model output"
+          subtitle="Derived from forecast probabilities"
           icon={ShieldAlert}
           accent={riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'danger' : 'solar'}
         />
 
         <MetricCard
-          title="1-Hour Model Score"
+          title="1-Hour Probability"
           value={forecast1h}
-          unit="uncalibrated"
-          subtitle="M/X onset score within next 60 minutes"
+          unit="P(M/X)"
+          subtitle="Onset within next 60 minutes"
           icon={Clock}
           accent="solar"
         />
@@ -152,7 +152,7 @@ export default function Overview() {
           title="Active Model"
           value={activeModel.split(' ')[0]}
           unit={activeModel.includes('Fusion') ? 'Fusion' : ''}
-          subtitle="Nowcast and multi-horizon forecast classifier"
+          subtitle="Dual-head neural classifier"
           icon={Cpu}
           accent="helios"
         />

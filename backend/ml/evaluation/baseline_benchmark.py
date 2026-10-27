@@ -25,7 +25,7 @@ from ml.data.synthetic_generator import generate_synthetic_dataset
 from ml.evaluation.metrics import (
     binary_confusion_counts, true_skill_statistic, heidke_skill_score, brier_skill_score,
 )
-from ml.features.engineering import FeatureConfig, add_rolling_features, get_feature_columns, select_feature_columns
+from ml.features.engineering import FeatureConfig, add_rolling_features, get_feature_columns
 from ml.features.labels import LabelConfig, apply_preflare_window, generate_forecast_labels
 from ml.features.windowing import chronological_split
 from ml.models.baseline import MODEL_BUILDERS
@@ -48,31 +48,23 @@ def prepare(raw: pd.DataFrame):
     feat = add_rolling_features(tf, FeatureConfig())
     cols = get_feature_columns(feat)
     cfg = LabelConfig()
-    # Label each forecast-origin partition independently. An event in a later
-    # partition must never create a positive label in an earlier one.
-    cadence = cfg.cadence_seconds
-    parts = []
-    for split in (tr, va, te):
-        split_times = set(split.timestamp)
-        split_features = feat.loc[feat.timestamp.isin(split_times)].copy().reset_index(drop=True)
-        split_labels = generate_forecast_labels(apply_preflare_window(split_features, cfg), cfg)
-        for horizon, column in zip(cfg.horizons_hours, FC):
-            split_labels[column] = pd.to_numeric(split_labels[column], errors="coerce").astype(float)
-            purge = min(int(horizon * 3600 / cadence), len(split_labels))
-            if purge:
-                split_labels.loc[len(split_labels) - purge:, column] = np.nan
-        parts.append(split_labels.dropna(subset=["state"]))
+    labeled = generate_forecast_labels(apply_preflare_window(feat, cfg), cfg)
+    parts = [x[["timestamp"]].merge(labeled, on="timestamp", how="inner")
+             .dropna(subset=cols + ["state"] + FC) for x in (tr, va, te)]
     return parts, cols
 
 
-def columns_for(frame, config):
-    """Use the same provenance-checked registry selection as model training."""
-    return select_feature_columns(frame, config)
+def columns_for(cols, config):
+    if config == "solexs_only":
+        return [c for c in cols if not c.startswith("helios") and "hard_soft_ratio" not in c]
+    if config == "helios_only":
+        return [c for c in cols if not c.startswith("solexs") and "hard_soft_ratio" not in c]
+    return cols
 
 
 def best_threshold(y_val, p_val):
     """Threshold maximising TSS on validation; 0.5 if validation has no positives."""
-    if len(y_val) == 0 or np.unique(y_val).size < 2:
+    if y_val.sum() == 0:
         return 0.5, False
     best_t, best = 0.5, -2.0
     for t in np.unique(np.round(np.quantile(p_val, np.linspace(0.01, 0.99, 99)), 6)):
@@ -84,16 +76,10 @@ def best_threshold(y_val, p_val):
 
 
 def run(parts, cols, models, configs):
+    tr, va, te = parts
     rows = []
     for config in configs:
-        tr_all, va_all, te_all = parts
-        use = columns_for(tr_all, config)
-        tr = tr_all.dropna(subset=use + ["state"])
-        va = va_all.dropna(subset=use + ["state"])
-        te = te_all.dropna(subset=use + ["state"])
-        if tr.empty or va.empty or te.empty:
-            rows.append(dict(model="all", config=config, note="insufficient complete inputs in a split"))
-            continue
+        use = columns_for(cols, config)
         clim = None
         for name in models:
             try:
@@ -108,21 +94,15 @@ def run(parts, cols, models, configs):
             row = dict(model=name, config=config,
                        nowcast_f1_macro=round(float(f1_score(te["state"].values, now_pred, average="macro", zero_division=0)), 3))
             for i, h in enumerate(HORIZONS):
-                y_va = pd.to_numeric(va[FC[i]], errors="coerce").to_numpy(dtype=float)
-                y_te = pd.to_numeric(te[FC[i]], errors="coerce").to_numpy(dtype=float)
-                known_va, known_te = np.isfinite(y_va), np.isfinite(y_te)
-                if not known_te.any() or np.unique(y_te[known_te]).size < 2:
+                y_va, y_te = va[FC[i]].values.astype(int), te[FC[i]].values.astype(int)
+                if y_te.sum() == 0:
                     row[f"TSS_{h}"] = row[f"HSS_{h}"] = row[f"BSS_{h}"] = np.nan
                     continue
-                t, tuned = best_threshold(y_va[known_va], p_val[known_va, i]) if known_va.any() else (0.5, False)
-                c = binary_confusion_counts(y_te[known_te].astype(int), (p_te[known_te, i] >= t).astype(int))
+                t, tuned = best_threshold(y_va, p_val[:, i])
+                c = binary_confusion_counts(y_te, (p_te[:, i] >= t).astype(int))
                 row[f"TSS_{h}"] = round(true_skill_statistic(**c), 3)
                 row[f"HSS_{h}"] = round(heidke_skill_score(**c), 3)
-                train_target = pd.to_numeric(tr[FC[i]], errors="coerce").dropna()
-                if train_target.empty:
-                    row[f"BSS_{h}"] = np.nan
-                else:
-                    row[f"BSS_{h}"] = round(brier_skill_score(y_te[known_te], p_te[known_te, i], train_target.mean()), 3)
+                row[f"BSS_{h}"] = round(brier_skill_score(y_te, p_te[:, i], tr[FC[i]].values.mean()), 3)
             rows.append(row)
     return pd.DataFrame(rows)
 

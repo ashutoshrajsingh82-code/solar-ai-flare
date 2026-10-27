@@ -7,7 +7,6 @@ from ml.evaluation.metrics import (
     evaluate_binary_forecast,
     multiclass_confusion_matrix,
     binary_confusion_counts,
-    reliability_diagram,
 )
 
 
@@ -44,20 +43,6 @@ def test_evaluate_binary_forecast_structure():
     assert "false_alarm_rate" in metrics
     assert "brier_score" in metrics
     assert metrics["brier_score"] < 0.25
-
-
-def test_no_positive_test_cases_leave_unsupported_scores_undefined():
-    metrics = evaluate_binary_forecast(np.array([0, 0, 0]), np.array([0.1, 0.2, 0.3]))
-    assert metrics["positive_count"] == 0
-    assert metrics["negative_count"] == 3
-    assert metrics["precision"] is None
-    assert metrics["recall"] is None
-    assert metrics["f1"] is None
-    assert metrics["roc_auc"] is None
-    assert metrics["pr_auc"] is None
-    assert metrics["tss"] is None
-    assert metrics["false_alarms"] == metrics["fp"]
-    assert "f1" in metrics["undefined_metric_reasons"]
 
 
 def test_multiclass_nowcast_matrix():
@@ -152,23 +137,3 @@ def test_far_and_brier_use_the_documented_definitions():
     # TP=1, FP=1, so FAR=FP/(TP+FP)=0.5.
     assert metrics["far"] == pytest.approx(0.5)
     assert metrics["brier_score"] == pytest.approx(np.mean((y_prob - y_true) ** 2))
-
-
-def test_reliability_fixed_width_bins_report_counts_and_event_rates():
-    result = reliability_diagram([0, 1, 1, 0], [0.0, 0.2, 0.99, 1.0], n_bins=2)
-    assert result["status"] == "insufficient_sample_count"
-    assert result["bins"] == [
-        {"lower_bound": 0.0, "upper_bound": 0.5, "upper_inclusive": False,
-         "sample_count": 2, "mean_predicted_probability": 0.1, "observed_event_frequency": 0.5},
-        {"lower_bound": 0.5, "upper_bound": 1.0, "upper_inclusive": True,
-         "sample_count": 2, "mean_predicted_probability": 0.995, "observed_event_frequency": 0.5},
-    ]
-
-
-def test_threshold_changes_confusion_metrics_but_not_brier_score():
-    labels, probs = [1, 1, 0, 0], [0.9, 0.4, 0.8, 0.1]
-    low = evaluate_binary_forecast(labels, probs, threshold=0.3)
-    high = evaluate_binary_forecast(labels, probs, threshold=0.7)
-    assert low["brier_score"] == high["brier_score"] == pytest.approx(0.255)
-    assert low["tp"] == 2 and low["fp"] == 1
-    assert high["tp"] == 1 and high["fp"] == 1

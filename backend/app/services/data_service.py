@@ -1,8 +1,6 @@
 import os
 import time
 import hashlib
-import csv
-from pathlib import Path
 import pandas as pd
 import numpy as np
 from sqlalchemy.orm import Session
@@ -36,85 +34,37 @@ def _dataset_fingerprint(df: pd.DataFrame) -> str:
 
 def load_demo_data(db: Session) -> dict:
     """Generates (if absent) and loads the synthetic demo dataset into pipeline_state."""
-    sample_dir = Path(settings.sample_data_dir)
-    if not sample_dir.is_absolute():
-        sample_dir = Path(__file__).resolve().parents[2] / sample_dir
-    sample_dir = sample_dir.resolve()
-    os.makedirs(sample_dir, exist_ok=True)
-    csv_path = str(sample_dir / "demo_aditya_l1_solexs_helios.csv")
+    os.makedirs(settings.sample_data_dir, exist_ok=True)
+    csv_path = os.path.join(settings.sample_data_dir, "demo_aditya_l1_solexs_helios.csv")
 
     if not os.path.exists(csv_path):
-        csv_path, _, df, _ = save_demo_dataset(str(sample_dir))
+        csv_path, _, df, _ = save_demo_dataset(settings.sample_data_dir)
     else:
         df = pd.read_csv(csv_path, parse_dates=["timestamp"])
 
     return _ingest_dataframe(db, df, filename=os.path.basename(csv_path), source="demo")
 
 
-def load_uploaded_csv(db: Session, filepath: str, filename: str, column_mapping: dict = None,
-                      upload_metadata: dict = None) -> dict:
-    path = Path(filepath)
-    if path.stat().st_size > settings.max_upload_bytes:
-        raise ValueError("CSV exceeds the configured maximum file size.")
-    try:
-        with path.open("r", encoding="utf-8-sig", newline="") as stream:
-            header = next(csv.reader(stream, strict=True), None)
-    except (UnicodeDecodeError, csv.Error, OSError) as exc:
-        raise ValueError("CSV is empty, malformed, or not valid UTF-8.") from exc
-    if not header or not any(str(name).strip() for name in header):
-        raise ValueError("CSV must contain a non-empty header and data rows.")
-    normalized = [str(name).strip().casefold() for name in header]
-    if any(not name for name in normalized) or len(set(normalized)) != len(normalized):
-        raise ValueError("CSV contains empty or duplicate column names.")
-    if len(header) > settings.max_upload_columns:
-        raise ValueError("CSV exceeds the configured maximum column count.")
-    try:
-        df = pd.read_csv(path, encoding="utf-8-sig", on_bad_lines="error", low_memory=False)
-    except (UnicodeDecodeError, pd.errors.ParserError, ValueError, OSError) as exc:
-        raise ValueError("CSV content is malformed or unreadable.") from exc
-    df.columns = [str(column).strip() for column in df.columns]
-    if len(df) == 0:
-        raise ValueError("CSV must contain at least one observation row.")
-    if len(df) > settings.max_upload_rows or len(df.columns) > settings.max_upload_columns:
-        raise ValueError("CSV exceeds the configured row or column limit.")
+def load_uploaded_csv(db: Session, filepath: str, filename: str, column_mapping: dict = None) -> dict:
+    df = pd.read_csv(filepath)
     if column_mapping:
         df = df.rename(columns=column_mapping)
-
-    normalized_columns = [str(column).strip().casefold() for column in df.columns]
-    if len(set(normalized_columns)) != len(normalized_columns):
-        raise ValueError("CSV contains ambiguous duplicate columns after normalization.")
 
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         raise ValueError(f"Uploaded file is missing required columns: {missing}. "
                           f"Detected columns: {list(df.columns)}. Provide a column_mapping if names differ.")
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce", format="mixed")
-    if df["timestamp"].isna().any():
-        raise ValueError("CSV contains missing or invalid timestamps.")
-    if df["timestamp"].duplicated().any():
-        raise ValueError("CSV contains duplicate observation timestamps.")
-    if not df["timestamp"].is_monotonic_increasing:
-        raise ValueError("CSV observations must be ordered chronologically.")
-    for column in ("solexs_flux", "helios_flux"):
-        raw = df[column]
-        numeric = pd.to_numeric(raw, errors="coerce")
-        invalid_text = raw.notna() & raw.astype(str).str.strip().ne("") & numeric.isna()
-        if invalid_text.any():
-            raise ValueError(f"CSV contains non-numeric values in {column}.")
-        if np.isinf(numeric.dropna().to_numpy(dtype=float)).any():
-            raise ValueError(f"CSV contains infinite values in {column}.")
-        df[column] = numeric
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
     if "state" not in df.columns:
         df["state"] = np.nan  # unknown ground truth must not be mislabeled as quiet
     if "flare_class" not in df.columns:
         df["flare_class"] = "-"
 
-    return _ingest_dataframe(db, df, filename=filename, source="upload", upload_metadata=upload_metadata)
+    return _ingest_dataframe(db, df, filename=filename, source="upload")
 
 
-def load_real_product(db: Session, filepath: str, instrument: str, product: str, filename: str = None,
-                      upload_metadata: dict = None) -> dict:
+def load_real_product(db: Session, filepath: str, instrument: str, product: str, filename: str = None) -> dict:
     """Load a documented local mission product; unknown contracts fail closed."""
     instrument = instrument.lower().strip()
     product = product.lower().strip()
@@ -135,9 +85,6 @@ def load_real_product(db: Session, filepath: str, instrument: str, product: str,
         "channels_detected": ["solexs_counts_per_second"],
         "data_quality_score": round(len(df) / max(1, report["input_rows"]), 3),
         "content_sha256": hashlib.sha256(pd.util.hash_pandas_object(df, index=False).values.tobytes()).hexdigest(),
-        "original_filename": os.path.basename(filename) if filename else None,
-        "raw_file_sha256": (upload_metadata or {}).get("content_sha256"),
-        "raw_file_size_bytes": (upload_metadata or {}).get("size_bytes"),
     }
     # Publish a dataset record only after the file has passed adapter validation.
     record = Dataset(
@@ -145,11 +92,7 @@ def load_real_product(db: Session, filepath: str, instrument: str, product: str,
         date_range_start=meta["data_period_start"], date_range_end=meta["data_period_end"],
         cadence_seconds=cadence_seconds, missing_values=report["rejected_rows"],
         data_quality_score=meta["data_quality_score"], channels_detected=meta["channels_detected"],
-        filepath=(upload_metadata or {}).get("storage_key", report["filename"]),
-        content_sha256=(upload_metadata or {}).get("content_sha256"),
-        file_format=(upload_metadata or {}).get("file_format", "fits"),
-        processing_status="processing", schema_metadata={"columns": list(df.columns), "rows": len(df)},
-        source_metadata=meta,
+        filepath=report["filename"], source_metadata=meta,
     )
     with pipeline_state.operation_lock:
         pipeline_state.reset_for_dataset()
@@ -167,7 +110,6 @@ def load_real_product(db: Session, filepath: str, instrument: str, product: str,
             meta["dataset_id"] = record.id
             pipeline_state.dataset_meta = meta
             pipeline_state.persist(include_frames=False)
-            record.processing_status = "complete"
             db.commit()
             db.refresh(record)
         except Exception:
@@ -178,8 +120,7 @@ def load_real_product(db: Session, filepath: str, instrument: str, product: str,
 
 
 def attach_goes_reference_labels(db: Session, filepath: str, filename: str,
-                                 coverage_start: str, coverage_end: str,
-                                 upload_metadata: dict = None) -> dict:
+                                 coverage_start: str, coverage_end: str) -> dict:
     """Attach independent NOAA event-derived horizon labels to a loaded real dataset."""
     if pipeline_state.raw_df is None or not pipeline_state.dataset_meta:
         raise ValueError("Load a real dataset before attaching reference flare labels")
@@ -190,10 +131,7 @@ def attach_goes_reference_labels(db: Session, filepath: str, filename: str,
         pipeline_state.raw_df, events.data, coverage_start, coverage_end,
     )
     source_meta = dict(pipeline_state.dataset_meta)
-    provenance = {**events.report, "label_report": label_report,
-                  "original_filename": os.path.basename(filename),
-                  "storage_key": (upload_metadata or {}).get("storage_key"),
-                  "content_sha256": (upload_metadata or {}).get("content_sha256")}
+    provenance = {**events.report, "label_report": label_report}
     source_meta["reference_labels"] = provenance
     labeled_raw = pipeline_state.raw_df.copy()
     for column in label_frame.columns:
@@ -238,14 +176,12 @@ def attach_goes_reference_labels(db: Session, filepath: str, filename: str,
     }
 
 
-def _ingest_dataframe(db: Session, df: pd.DataFrame, filename: str, source: str,
-                      upload_metadata: dict = None) -> dict:
+def _ingest_dataframe(db: Session, df: pd.DataFrame, filename: str, source: str) -> dict:
     with pipeline_state.operation_lock:
-        return _ingest_dataframe_locked(db, df, filename, source, upload_metadata)
+        return _ingest_dataframe_locked(db, df, filename, source)
 
 
-def _ingest_dataframe_locked(db: Session, df: pd.DataFrame, filename: str, source: str,
-                             upload_metadata: dict = None) -> dict:
+def _ingest_dataframe_locked(db: Session, df: pd.DataFrame, filename: str, source: str) -> dict:
     t0 = time.time()
     n_rows = len(df)
     missing_values = int(df[["solexs_flux", "helios_flux"]].isna().sum().sum())
@@ -268,46 +204,32 @@ def _ingest_dataframe_locked(db: Session, df: pd.DataFrame, filename: str, sourc
         "data_quality_score": quality_score,
         "source": source,
         "content_sha256": _dataset_fingerprint(df),
-        "original_filename": os.path.basename(filename),
-        "raw_file_sha256": (upload_metadata or {}).get("content_sha256"),
-        "raw_file_size_bytes": (upload_metadata or {}).get("size_bytes"),
     }
     record = Dataset(
         filename=filename, source=source, n_rows=n_rows,
         date_range_start=meta["date_range_start"], date_range_end=meta["date_range_end"],
         cadence_seconds=cadence_seconds, missing_values=missing_values,
         data_quality_score=quality_score, channels_detected=meta["channels_detected"],
-        filepath=(upload_metadata or {}).get("storage_key", filename),
-        content_sha256=(upload_metadata or {}).get("content_sha256") or meta["content_sha256"],
-        file_format=(upload_metadata or {}).get("file_format", "generated-csv" if source == "demo" else "csv"),
-        processing_status="processing", schema_metadata={"columns": list(df.columns), "rows": len(df)},
-        source_metadata=meta,
+        filepath=filename, source_metadata=meta,
     )
     db.add(record)
-    try:
-        db.flush()
-        meta["dataset_id"] = record.id
-        same_dataset = (
-            pipeline_state.dataset_meta.get("content_sha256") == meta["content_sha256"]
-            and pipeline_state.dataset_meta.get("source") == source
-        )
-        if not same_dataset:
-            pipeline_state.reset_for_dataset()
-        pipeline_state.raw_df = df.copy()
-        pipeline_state.dataset_meta = meta
-        pipeline_state.cadence_seconds = cadence_seconds
-        if not same_dataset or pipeline_state.stage_reports.get("raw") is None:
-            pipeline_state.set_stage("raw", df.copy(), {
-                "input_rows": len(df), "output_rows": len(df), "warnings": [],
-            }, time.time() - t0)
-        pipeline_state.persist(include_frames=not same_dataset)
-        record.processing_status = "complete"
-        db.commit()
-        db.refresh(record)
-    except Exception:
-        db.rollback()
+    db.commit()
+    db.refresh(record)
+    meta["dataset_id"] = record.id
+    same_dataset = (
+        pipeline_state.dataset_meta.get("content_sha256") == meta["content_sha256"]
+        and pipeline_state.dataset_meta.get("source") == source
+    )
+    if not same_dataset:
         pipeline_state.reset_for_dataset()
-        raise
+    pipeline_state.raw_df = df.copy()
+    pipeline_state.dataset_meta = meta
+    pipeline_state.cadence_seconds = cadence_seconds
+    if not same_dataset or pipeline_state.stage_reports.get("raw") is None:
+        pipeline_state.set_stage("raw", df.copy(), {
+            "input_rows": len(df), "output_rows": len(df), "warnings": [],
+        }, time.time() - t0)
+    pipeline_state.persist(include_frames=not same_dataset)
     return meta
 
 

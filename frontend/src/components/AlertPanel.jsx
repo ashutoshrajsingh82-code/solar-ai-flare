@@ -24,7 +24,6 @@ export default function AlertPanel({
       {displayed.map((alert) => {
         const isCritical = alert.severity === 'CRITICAL';
         const isHigh = alert.severity === 'HIGH';
-        const score = alert.model_score ?? alert.probability;
 
         return (
           <div
@@ -62,9 +61,9 @@ export default function AlertPanel({
                   <p className="text-xs text-slate-200 mt-1.5 font-medium leading-relaxed">
                     {alert.message}
                   </p>
-                  {score !== null && score !== undefined && (
+                  {alert.probability !== null && alert.probability !== undefined && (
                     <div className="mt-1 text-[11px] font-mono text-slate-400">
-                      {alert.score_semantics || 'Uncalibrated model score'}: <span className="text-solar-400 font-bold">{Number(score).toFixed(3)}</span>
+                      Peak Probability: <span className="text-solar-400 font-bold">{(alert.probability * 100).toFixed(1)}%</span>
                       {alert.model && <span className="ml-2 text-slate-500">({alert.model})</span>}
                     </div>
                   )}

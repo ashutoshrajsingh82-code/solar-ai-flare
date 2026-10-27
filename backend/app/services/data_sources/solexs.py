@@ -25,16 +25,7 @@ def read_solexs_l1_light_curve(path: str | Path) -> IngestionResult:
     try:
         with fits.open(source_path, mode="readonly", memmap=False) as hdus:
             rate_hdu = next((hdu for hdu in hdus if str(hdu.name).upper() == "RATE"), None)
-            if rate_hdu is None:
-                raise ValueError("SoLEXS L1 LC FITS is missing a populated RATE table")
-            row_count = int(rate_hdu.header.get("NAXIS2", 0) or 0)
-            row_width = int(rate_hdu.header.get("NAXIS1", 0) or 0)
-            from app.core.config import settings
-            if row_count > settings.max_upload_rows:
-                raise ValueError("SoLEXS FITS table exceeds the configured row limit")
-            if row_count * row_width > settings.max_upload_bytes * 4:
-                raise ValueError("SoLEXS FITS table exceeds the configured expanded-data limit")
-            if rate_hdu.data is None:
+            if rate_hdu is None or rate_hdu.data is None:
                 raise ValueError("SoLEXS L1 LC FITS is missing a populated RATE table")
             names = {str(name).upper(): name for name in (rate_hdu.columns.names or [])}
             if not {"TIME", "COUNTS"}.issubset(names):

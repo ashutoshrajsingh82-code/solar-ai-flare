@@ -47,21 +47,21 @@ def validate_training_data(X_train, y_now_train, y_fc_train, X_val, y_now_val, y
 
 
 def validate_classical_training_data(X_train, y_now_train, y_fc_train,
-                                     X_val, y_now_val, y_fc_val):
-    X_train, y_now_train, y_fc_train, X_val, y_now_val, y_fc_val = [
+                                     X_test, y_now_test, y_fc_test):
+    X_train, y_now_train, y_fc_train, X_test, y_now_test, y_fc_test = [
         np.asarray(value) for value in
-        (X_train, y_now_train, y_fc_train, X_val, y_now_val, y_fc_val)
+        (X_train, y_now_train, y_fc_train, X_test, y_now_test, y_fc_test)
     ]
-    if X_train.ndim != 2 or X_val.ndim != 2 or X_train.shape[1] == 0 or \
-            X_train.shape[1] != X_val.shape[1]:
-        raise ValueError("Classical training and validation features must be compatible non-empty matrices.")
-    if len(X_train) == 0 or len(X_val) == 0:
-        raise ValueError("Classical training and validation splits must both contain samples.")
-    if not np.isfinite(X_train).all() or not np.isfinite(X_val).all():
+    if X_train.ndim != 2 or X_test.ndim != 2 or X_train.shape[1] == 0 or \
+            X_train.shape[1] != X_test.shape[1]:
+        raise ValueError("Classical training and test features must be compatible non-empty matrices.")
+    if len(X_train) == 0 or len(X_test) == 0:
+        raise ValueError("Classical training and test splits must both contain samples.")
+    if not np.isfinite(X_train).all() or not np.isfinite(X_test).all():
         raise ValueError("Classical model features must contain only finite values.")
     for name, y_now, y_fc, n_rows in (
             ("training", y_now_train, y_fc_train, len(X_train)),
-            ("validation", y_now_val, y_fc_val, len(X_val))):
+            ("test", y_now_test, y_fc_test, len(X_test))):
         if y_now.ndim != 1 or y_fc.ndim != 2 or len(y_now) != n_rows or len(y_fc) != n_rows:
             raise ValueError(f"Classical {name} features and targets have incompatible shapes.")
         if not np.isfinite(y_now).all() or not np.equal(y_now, np.floor(y_now)).all() or \

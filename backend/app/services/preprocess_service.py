@@ -1,7 +1,5 @@
 
 import time
-import json
-import os
 
 import pandas as pd
 
@@ -15,15 +13,13 @@ from ml.features.engineering import (
     add_rolling_features,
     FeatureConfig,
     get_feature_columns,
-    get_feature_registry,
 )
 from ml.features.labels import (
     generate_forecast_labels,
     apply_preflare_window,
     LabelConfig,
 )
-from ml.features.windowing import chronological_split, build_split_audit
-from ml.features.manifest import data_fingerprint
+from ml.features.windowing import chronological_split
 
 
 CADENCE_SECONDS_MAP = {
@@ -114,13 +110,7 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
     pipeline_state.cadence_seconds = cadence_seconds
 
     # --- Chronological split BEFORE fitting the scaler ---
-    train_df, val_df, test_df = chronological_split(
-        aligned_df,
-        train_frac=req.train_fraction,
-        val_frac=req.validation_fraction,
-        train_end=req.train_end_utc,
-        val_end=req.validation_end_utc,
-    )
+    train_df, val_df, test_df = chronological_split(aligned_df)
 
     pipeline_state.train_df = train_df
     pipeline_state.val_df = val_df
@@ -191,10 +181,6 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
         "output_rows": len(featured_df),
         "n_features_generated": len(feature_cols),
         "feature_names_sample": feature_cols[:15],
-        "feature_config": feat_cfg.__dict__,
-        "feature_schema_version": featured_df.attrs.get("feature_schema_version"),
-        "feature_registry_version": "feature-registry-v2",
-        "feature_registry": get_feature_registry(featured_df, feat_cfg),
         "warnings": [],
     }
 
@@ -316,61 +302,6 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
         time.time() - t0,
     )
 
-    split_config = {
-        "method": "explicit_utc_boundaries" if req.train_end_utc is not None else "chronological_proportions",
-        "train_fraction": None if req.train_end_utc is not None else req.train_fraction,
-        "validation_fraction": None if req.train_end_utc is not None else req.validation_fraction,
-        "test_fraction": None if req.train_end_utc is not None else 1.0 - req.train_fraction - req.validation_fraction,
-        "train_end_utc": req.train_end_utc,
-        "validation_end_utc": req.validation_end_utc,
-        "target_policy": "labels generated within each target partition; horizon tail purged",
-        "input_context_policy": "earlier observations may be used as historical input only",
-    }
-    observed_class = labeled_df.get("flare_class", pd.Series("-", index=labeled_df.index)).fillna("-").astype(str).str.upper().str.extract(r"^\s*([BCMX])", expand=False)
-    observed_flare = pd.to_numeric(labeled_df.get("state"), errors="coerce").eq(2) & observed_class.isin(["C", "M", "X"])
-    event_onsets = observed_flare & ~observed_flare.shift(1, fill_value=False)
-    event_catalog = [
-        {"timestamp": timestamp, "flare_class_group": flare_class}
-        for timestamp, flare_class in zip(labeled_df.loc[event_onsets, "timestamp"], observed_class.loc[event_onsets])
-    ]
-    raw_times = pd.to_datetime(pipeline_state.raw_df["timestamp"], utc=True, errors="coerce", format="mixed")
-    ordered_raw_times = raw_times.dropna().reset_index(drop=True)
-    timestamp_quality = {
-        "invalid_or_missing_timestamps": int(raw_times.isna().sum()),
-        "duplicate_timestamp_rows": int(ordered_raw_times.duplicated().sum()),
-        "out_of_order_adjacent_pairs": int(ordered_raw_times.diff().lt(pd.Timedelta(0)).sum()),
-    }
-    audit_partitions = {
-        "train": labeled_df[labeled_df.timestamp.isin(train_df.timestamp)],
-        "validation": labeled_df[labeled_df.timestamp.isin(val_df.timestamp)],
-        "test": labeled_df[labeled_df.timestamp.isin(test_df.timestamp)],
-    }
-    audit_contexts = {}
-    for name, frame in audit_partitions.items():
-        if frame.empty:
-            audit_contexts[name] = frame.iloc[:0].copy()
-        else:
-            start = pd.to_datetime(frame.timestamp, utc=True).min()
-            prior = pd.to_datetime(labeled_df.timestamp, utc=True) < start
-            audit_contexts[name] = labeled_df.loc[prior].tail(59).copy()
-    split_audit = build_split_audit(
-        audit_partitions,
-        forecast_columns, split_config,
-        {**pipeline_state.dataset_meta, "synthetic": pipeline_state.dataset_meta.get("source") == "demo",
-         "purged": boundary_purged, "raw_timestamp_quality": timestamp_quality,
-         "dataset_fingerprint": data_fingerprint(pipeline_state.raw_df)},
-        sequence_length=60,
-        channel_cols=["solexs_flux_scaled", "helios_flux_scaled"],
-        event_catalog=event_catalog, context_frames=audit_contexts,
-    )
-    audit_dir = pipeline_state.artifact_dir
-    os.makedirs(audit_dir, exist_ok=True)
-    audit_json_path = os.path.join(audit_dir, "split_audit.json")
-    audit_csv_path = os.path.join(audit_dir, "split_audit.csv")
-    with open(audit_json_path, "w", encoding="utf-8") as stream:
-        json.dump(split_audit, stream, indent=2, default=str)
-    pd.DataFrame(split_audit["partitions"]).to_csv(audit_csv_path, index=False)
-
     # Persist the complete split and transformer snapshot after a successful run.
     report_stage("persisting_artifacts")
     pipeline_state.persist(include_frames=False)
@@ -411,9 +342,6 @@ def _run_full_pipeline(req: PreprocessRequest, stage_callback=None) -> dict:
             "preserved from attached reference labels or generated for demo "
             "data; see label_mode and target_counts_by_split."
         ),
-        "split_audit": split_audit,
-        "split_audit_json": audit_json_path,
-        "split_audit_csv": audit_csv_path,
     }
 
 

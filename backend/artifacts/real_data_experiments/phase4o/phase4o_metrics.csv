@@ -1,6 +1,0 @@
-model_name,val_mae,val_rmse,val_rel_mae_pct,skill_vs_persist_pct,skill_vs_mean_pct,mae_high_rate_gt1000,mae_rising_trend,mae_stable_trend
-persistence,20.284,33.346,4.55,0.0,21.87,53.115,14.928,24.051
-rolling_mean,25.962,67.412,5.83,-27.99,0.0,91.253,22.45,31.164
-cnn_lstm_direct,20.275,38.403,4.55,0.05,21.91,64.287,12.2,25.87
-cnn_lstm_residual,375.511,703.812,84.28,-1751.27,-1346.4,1714.172,134.738,510.22
-trend_aware_residual,374.95,704.142,84.16,-1748.5,-1344.23,1715.293,131.538,511.373

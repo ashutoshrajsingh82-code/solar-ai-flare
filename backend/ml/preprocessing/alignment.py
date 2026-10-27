@@ -67,10 +67,10 @@ def align_and_resample(
     agg_dict = {c: cfg.agg for c in numeric_cols if c in df.columns}
 
     if agg_dict:
-        resampled = df[list(agg_dict)].resample(rule, closed="right", label="right").agg(agg_dict)
+        resampled = df[list(agg_dict)].resample(rule).agg(agg_dict)
     else:
         resampled = pd.DataFrame(
-            index=df.resample(rule, closed="right", label="right").size().index
+            index=df.resample(rule).size().index
         )
 
     # Preserve independent forecast targets without averaging them.
@@ -79,14 +79,14 @@ def align_and_resample(
         if c.startswith("forecast_")
     ]
     for col in forecast_cols:
-        resampled[col] = df[col].resample(rule, closed="right", label="right").agg(
+        resampled[col] = df[col].resample(rule).agg(
             _aggregate_forecast_target
         )
 
     # Retain existing categorical behavior.
     for cat_col in ["state", "flare_class"]:
         if cat_col in df.columns:
-            resampled[cat_col] = df[cat_col].resample(rule, closed="right", label="right").agg(
+            resampled[cat_col] = df[cat_col].resample(rule).agg(
                 lambda s: (
                     s.mode().iloc[0]
                     if not s.mode().empty

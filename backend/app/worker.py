@@ -10,9 +10,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-from app.database.db import engine, init_db
-from app.core.config import settings
-from sqlalchemy import text
+from app.database.db import init_db
 from app.schemas.schemas import PreprocessRequest, TrainRequest
 from app.services import model_service, preprocess_service
 from app.services.artifact_catalog import catalog_pipeline_artifacts
@@ -97,13 +95,7 @@ def _execute(manager, job, worker_id):
 def run_worker(poll_interval=1.0, stop_event=None):
     if poll_interval <= 0:
         raise ValueError("poll_interval must be positive")
-    settings.validate_runtime()
-    if settings.should_auto_migrate:
-        init_db()
-    else:
-        # Production migrations are run as a separate deployment step.
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
+    init_db()
     worker_id = f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
     lock_path = pipeline_state.artifact_dir / ".worker.lock"
     with _single_worker_lock(lock_path):

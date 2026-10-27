@@ -1,9 +1,0 @@
-{
-  "schema_version": "phase4l_request_register_v1",
-  "created_utc": "2026-10-25",
-  "baseline_blocker_register": "reports/phase4k_blocker_register.json",
-  "requests": [
-    {"request_id":"REQ-SLX-001","blocker_ids":["B-SLX-GTI-001","B-SLX-PROV-002","B-SLX-CAL-003"],"rule_ids":["R03","R05","R06"],"draft_artifact":"reports/phase4l_solexs_inquiry_draft_v2.md","draft_sha256":"d156f0f9290037eb7c040e17a8cb876d4f523b9c8473794a40b4583c30af6284","status":"REQUEST_PREPARED","adjudication_status":"NOT_STARTED","adjudication_rationale":"No submission or response evidence exists.","audit_history":["2026-10-25: draft v2 validated against three Phase 4K blockers; not sent."],"submission":null,"acknowledgement":null,"response":null,"followup_history":[]},
-    {"request_id":"REQ-HL-002","blocker_ids":["B-HL-TIME-004","B-HL-QUALITY-005","B-HL-VERSION-006"],"rule_ids":["R07","R08","R13","R14"],"draft_artifact":"reports/phase4l_hel1os_inquiry_draft_v2.md","draft_sha256":"093203526ed63efb0ccd54ac43325738c8859eaeeec5381fc4dce080d53cbde7","status":"REQUEST_PREPARED","adjudication_status":"NOT_STARTED","adjudication_rationale":"No submission or response evidence exists.","audit_history":["2026-10-25: draft v2 validated against three Phase 4K blockers; not sent."],"submission":null,"acknowledgement":null,"response":null,"followup_history":[]}
-  ]
-}

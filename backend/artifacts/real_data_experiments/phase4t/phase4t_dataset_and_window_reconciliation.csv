@@ -1,9 +1,0 @@
-observation_date,partition_split,total_records,finite_records,nan_records,duty_cycle_pct,monotonic_timestamps,cadence_1s_uniform,contiguous_segments_count,segment_lengths,computed_sliding_windows,min_count_rate,median_count_rate,peak_count_rate,units_time,units_rate
-20240508,train,86400,86395,5,99.9942,True,True,3,"[15765, 60052, 10570]",86180,126.0,903.0,8086.0,s,counts/s
-20240509,train,86400,86398,2,99.9977,True,True,2,"[49216, 37182]",86260,122.0,538.0,14555.0,s,counts/s
-20240510,train,86400,86396,4,99.9954,True,True,4,"[22822, 54268, 5865, 3441]",86120,91.0,385.0,19937.0,s,counts/s
-20240511,train,86400,86398,2,99.9977,True,True,2,"[56347, 30051]",86260,78.0,449.0,22152.0,s,counts/s
-20240512,train,86400,86396,4,99.9954,True,True,2,"[29723, 56664]",86249,81.0,229.0,8064.0,s,counts/s
-20240513,val,86400,86396,4,99.9954,True,True,3,"[1378, 57696, 27318]",86185,53.0,219.0,5238.0,s,counts/s
-20240514,test,86400,86395,5,99.9942,True,True,3,"[30066, 53872, 2448]",86179,64.0,275.0,29568.0,s,counts/s
-20240515,test,86400,86398,2,99.9977,True,True,2,"[51196, 35202]",86260,46.0,229.0,20022.0,s,counts/s
