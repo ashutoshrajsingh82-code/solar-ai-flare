@@ -1,0 +1,2906 @@
+{
+  "version": 1,
+  "dataset_meta": {
+    "source": "demo",
+    "filename": "demo_aditya_l1_solexs_helios.csv",
+    "synthetic": true,
+    "event_metadata_verified": false,
+    "scientific_status": "synthetic_demo_smoke"
+  },
+  "stage_reports": {
+    "raw": {
+      "input_rows": 14401,
+      "output_rows": 14401,
+      "duration_sec": 0.0,
+      "status": "complete",
+      "updated_at": 1792523235.9562223
+    },
+    "cleaned": {
+      "input_rows": 14401,
+      "output_rows": 14400,
+      "invalid_timestamps_removed": 0,
+      "duplicates_removed": 1,
+      "out_of_order_adjacent_pairs": 0,
+      "negative_values_marked_missing": 0,
+      "spikes_detected": 6337,
+      "spikes_corrected": 0,
+      "nan_count_before": 64,
+      "nan_count_after_flagging": 64,
+      "nan_count_final": 64,
+      "large_gaps_left_as_nan": 0,
+      "interpolation": "none",
+      "duplicate_policy": "stable keep-first",
+      "spike_policy": "prior-only elapsed-time median/MAD flags; measurements are retained",
+      "spike_lookback_minutes": 10,
+      "spike_min_samples": 5,
+      "spike_threshold": 6.0,
+      "warnings": [],
+      "observation_gaps_over_3x_median_cadence": 0,
+      "duration_sec": 6.0145,
+      "status": "complete",
+      "updated_at": 1792523242.0374804
+    },
+    "aligned": {
+      "input_rows": 14400,
+      "output_rows": 14400,
+      "target_cadence": "1min",
+      "date_range_start": "2026-08-01 00:00:00+00:00",
+      "date_range_end": "2026-08-10 23:59:00+00:00",
+      "missing_after_resample": 64,
+      "forecast_target_columns_preserved": [],
+      "duration_sec": 9.7379,
+      "status": "complete",
+      "updated_at": 1792523251.7931461
+    },
+    "transformed": {
+      "input_rows": 14400,
+      "output_rows": 14400,
+      "scaler_type": "standard",
+      "fit_on": "train_split_only",
+      "train_rows": 10080,
+      "val_rows": 2160,
+      "test_rows": 2160,
+      "warnings": [],
+      "duration_sec": 0.0209,
+      "status": "complete",
+      "updated_at": 1792523251.8382285
+    },
+    "featured": {
+      "input_rows": 14400,
+      "output_rows": 14400,
+      "n_features_generated": 106,
+      "feature_names_sample": [
+        "solexs_flux_scaled",
+        "helios_flux_scaled",
+        "sampling_interval_seconds",
+        "cadence_deviation_fraction",
+        "irregular_sampling",
+        "long_observation_gap",
+        "solexs_missing",
+        "solexs_time_since_valid_min",
+        "solexs_diff1",
+        "solexs_pct_change",
+        "solexs_mean_5m",
+        "solexs_median_5m",
+        "solexs_std_5m",
+        "solexs_min_5m",
+        "solexs_max_5m"
+      ],
+      "feature_config": {
+        "cadence_seconds": 60,
+        "windows_minutes": [
+          5,
+          10,
+          30,
+          60
+        ],
+        "compute_stl": false,
+        "stl_period_minutes": 60,
+        "min_rolling_samples": 2,
+        "min_rolling_fraction": 0.33,
+        "spike_lookback_minutes": 10,
+        "spike_min_samples": 5,
+        "spike_threshold": 6.0,
+        "irregular_tolerance_fraction": 0.25,
+        "long_gap_multiplier": 3.0,
+        "enable_hard_soft_ratio": false,
+        "channel_metadata": null,
+        "quality_columns": null
+      },
+      "feature_schema_version": "causal-time-aware-v2",
+      "feature_registry_version": "feature-registry-v2",
+      "feature_registry": {
+        "solexs_flux_scaled": {
+          "name": "solexs_flux_scaled",
+          "description_formula": "Input measurement or training-scaled solexs_flux value.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "helios_flux_scaled": {
+          "name": "helios_flux_scaled",
+          "description_formula": "Input measurement or training-scaled helios_flux value.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "sampling_interval_seconds": {
+          "name": "sampling_interval_seconds",
+          "description_formula": "Numeric input with unknown instrument provenance; not eligible for isolated experiments.",
+          "source_columns": [
+            "timestamp"
+          ],
+          "source_instruments": [
+            "SoLEXS",
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS",
+            "HEL1OS"
+          ]
+        },
+        "cadence_deviation_fraction": {
+          "name": "cadence_deviation_fraction",
+          "description_formula": "Numeric input with unknown instrument provenance; not eligible for isolated experiments.",
+          "source_columns": [
+            "timestamp"
+          ],
+          "source_instruments": [
+            "SoLEXS",
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS",
+            "HEL1OS"
+          ]
+        },
+        "irregular_sampling": {
+          "name": "irregular_sampling",
+          "description_formula": "Numeric input with unknown instrument provenance; not eligible for isolated experiments.",
+          "source_columns": [
+            "timestamp"
+          ],
+          "source_instruments": [
+            "SoLEXS",
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS",
+            "HEL1OS"
+          ]
+        },
+        "long_observation_gap": {
+          "name": "long_observation_gap",
+          "description_formula": "Numeric input with unknown instrument provenance; not eligible for isolated experiments.",
+          "source_columns": [
+            "timestamp"
+          ],
+          "source_instruments": [
+            "SoLEXS",
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS",
+            "HEL1OS"
+          ]
+        },
+        "solexs_missing": {
+          "name": "solexs_missing",
+          "description_formula": "1 when solexs_flux is missing at this timestamp; otherwise 0.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_time_since_valid_min": {
+          "name": "solexs_time_since_valid_min",
+          "description_formula": "Elapsed minutes since the most recent valid observation; trailing only.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_diff1": {
+          "name": "solexs_diff1",
+          "description_formula": "Difference or relative change from the immediately preceding observation.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_pct_change": {
+          "name": "solexs_pct_change",
+          "description_formula": "Difference or relative change from the immediately preceding observation.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_mean_5m": {
+          "name": "solexs_mean_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_median_5m": {
+          "name": "solexs_median_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_std_5m": {
+          "name": "solexs_std_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_min_5m": {
+          "name": "solexs_min_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_max_5m": {
+          "name": "solexs_max_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_var_5m": {
+          "name": "solexs_var_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_p90_5m": {
+          "name": "solexs_p90_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_recent_peak_5m": {
+          "name": "solexs_recent_peak_5m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_flux_diff_5m": {
+          "name": "solexs_flux_diff_5m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_slope_5m": {
+          "name": "solexs_slope_5m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_missing_fraction_5m": {
+          "name": "solexs_missing_fraction_5m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_mean_10m": {
+          "name": "solexs_mean_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_median_10m": {
+          "name": "solexs_median_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_std_10m": {
+          "name": "solexs_std_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_min_10m": {
+          "name": "solexs_min_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_max_10m": {
+          "name": "solexs_max_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_var_10m": {
+          "name": "solexs_var_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_p90_10m": {
+          "name": "solexs_p90_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_recent_peak_10m": {
+          "name": "solexs_recent_peak_10m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_flux_diff_10m": {
+          "name": "solexs_flux_diff_10m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_slope_10m": {
+          "name": "solexs_slope_10m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_missing_fraction_10m": {
+          "name": "solexs_missing_fraction_10m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_mean_30m": {
+          "name": "solexs_mean_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_median_30m": {
+          "name": "solexs_median_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_std_30m": {
+          "name": "solexs_std_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_min_30m": {
+          "name": "solexs_min_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_max_30m": {
+          "name": "solexs_max_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_var_30m": {
+          "name": "solexs_var_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_p90_30m": {
+          "name": "solexs_p90_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_recent_peak_30m": {
+          "name": "solexs_recent_peak_30m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_flux_diff_30m": {
+          "name": "solexs_flux_diff_30m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_slope_30m": {
+          "name": "solexs_slope_30m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_missing_fraction_30m": {
+          "name": "solexs_missing_fraction_30m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_mean_60m": {
+          "name": "solexs_mean_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_median_60m": {
+          "name": "solexs_median_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_std_60m": {
+          "name": "solexs_std_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_min_60m": {
+          "name": "solexs_min_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_max_60m": {
+          "name": "solexs_max_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_var_60m": {
+          "name": "solexs_var_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_p90_60m": {
+          "name": "solexs_p90_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_recent_peak_60m": {
+          "name": "solexs_recent_peak_60m",
+          "description_formula": "Trailing time-based statistic derived from solexs_flux.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_flux_diff_60m": {
+          "name": "solexs_flux_diff_60m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_slope_60m": {
+          "name": "solexs_slope_60m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_missing_fraction_60m": {
+          "name": "solexs_missing_fraction_60m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_spike_score": {
+          "name": "solexs_spike_score",
+          "description_formula": "Signed deviation from prior-window median divided by 1.4826 times prior-window MAD.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "solexs_spike_flag": {
+          "name": "solexs_spike_flag",
+          "description_formula": "1 when absolute causal robust score meets configured threshold; NaN with insufficient history.",
+          "source_columns": [
+            "solexs_flux"
+          ],
+          "source_instruments": [
+            "SoLEXS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "SoLEXS"
+          ]
+        },
+        "helios_missing": {
+          "name": "helios_missing",
+          "description_formula": "1 when helios_flux is missing at this timestamp; otherwise 0.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_time_since_valid_min": {
+          "name": "helios_time_since_valid_min",
+          "description_formula": "Elapsed minutes since the most recent valid observation; trailing only.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_diff1": {
+          "name": "helios_diff1",
+          "description_formula": "Difference or relative change from the immediately preceding observation.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_pct_change": {
+          "name": "helios_pct_change",
+          "description_formula": "Difference or relative change from the immediately preceding observation.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_mean_5m": {
+          "name": "helios_mean_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_median_5m": {
+          "name": "helios_median_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_std_5m": {
+          "name": "helios_std_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_min_5m": {
+          "name": "helios_min_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_max_5m": {
+          "name": "helios_max_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_var_5m": {
+          "name": "helios_var_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_p90_5m": {
+          "name": "helios_p90_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_recent_peak_5m": {
+          "name": "helios_recent_peak_5m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_flux_diff_5m": {
+          "name": "helios_flux_diff_5m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_slope_5m": {
+          "name": "helios_slope_5m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_missing_fraction_5m": {
+          "name": "helios_missing_fraction_5m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 5,
+          "minimum_history_samples": 2,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_mean_10m": {
+          "name": "helios_mean_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_median_10m": {
+          "name": "helios_median_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_std_10m": {
+          "name": "helios_std_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_min_10m": {
+          "name": "helios_min_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_max_10m": {
+          "name": "helios_max_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_var_10m": {
+          "name": "helios_var_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_p90_10m": {
+          "name": "helios_p90_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_recent_peak_10m": {
+          "name": "helios_recent_peak_10m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_flux_diff_10m": {
+          "name": "helios_flux_diff_10m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_slope_10m": {
+          "name": "helios_slope_10m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_missing_fraction_10m": {
+          "name": "helios_missing_fraction_10m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 10,
+          "minimum_history_samples": 4,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_mean_30m": {
+          "name": "helios_mean_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_median_30m": {
+          "name": "helios_median_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_std_30m": {
+          "name": "helios_std_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_min_30m": {
+          "name": "helios_min_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_max_30m": {
+          "name": "helios_max_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_var_30m": {
+          "name": "helios_var_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_p90_30m": {
+          "name": "helios_p90_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_recent_peak_30m": {
+          "name": "helios_recent_peak_30m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_flux_diff_30m": {
+          "name": "helios_flux_diff_30m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_slope_30m": {
+          "name": "helios_slope_30m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_missing_fraction_30m": {
+          "name": "helios_missing_fraction_30m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 30,
+          "minimum_history_samples": 10,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_mean_60m": {
+          "name": "helios_mean_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_median_60m": {
+          "name": "helios_median_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_std_60m": {
+          "name": "helios_std_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_min_60m": {
+          "name": "helios_min_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_max_60m": {
+          "name": "helios_max_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_var_60m": {
+          "name": "helios_var_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_p90_60m": {
+          "name": "helios_p90_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_recent_peak_60m": {
+          "name": "helios_recent_peak_60m",
+          "description_formula": "Trailing time-based statistic derived from helios_flux.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_flux_diff_60m": {
+          "name": "helios_flux_diff_60m",
+          "description_formula": "Current measurement minus latest valid measurement at or before the named elapsed lag.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_slope_60m": {
+          "name": "helios_slope_60m",
+          "description_formula": "Least-squares slope against elapsed minutes in the trailing time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_missing_fraction_60m": {
+          "name": "helios_missing_fraction_60m",
+          "description_formula": "Expected cadence samples missing in the trailing elapsed-time window.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": 60,
+          "minimum_history_samples": 20,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_spike_score": {
+          "name": "helios_spike_score",
+          "description_formula": "Signed deviation from prior-window median divided by 1.4826 times prior-window MAD.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        },
+        "helios_spike_flag": {
+          "name": "helios_spike_flag",
+          "description_formula": "1 when absolute causal robust score meets configured threshold; NaN with insufficient history.",
+          "source_columns": [
+            "helios_flux"
+          ],
+          "source_instruments": [
+            "HEL1OS"
+          ],
+          "physical_quantity": null,
+          "units": null,
+          "energy_band_kev": null,
+          "rolling_window_minutes": null,
+          "minimum_history_samples": null,
+          "availability": "at_observation_timestamp; causal/trailing",
+          "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+          "causal": true,
+          "feature_version": "causal-time-aware-v2",
+          "provenance_known": true,
+          "allowed_experiments": [
+            "HEL1OS"
+          ]
+        }
+      },
+      "warnings": [],
+      "duration_sec": 7.1346,
+      "status": "complete",
+      "updated_at": 1792523259.0189614
+    },
+    "labeled": {
+      "input_rows": 14400,
+      "output_rows": 14400,
+      "label_mode": "demo_event_derived",
+      "preflare_minutes": 30,
+      "forecast_horizons": [
+        1,
+        3,
+        6,
+        12,
+        24
+      ],
+      "positive_rate_1h": 0.016877637130801686,
+      "positive_rate_24h": 0.45029761904761906,
+      "positive_counts_by_split": {
+        "train": {
+          "forecast_1h": 240,
+          "forecast_3h": 720,
+          "forecast_6h": 1440,
+          "forecast_12h": 2607,
+          "forecast_24h": 4539
+        },
+        "validation": {
+          "forecast_1h": 0,
+          "forecast_3h": 0,
+          "forecast_6h": 0,
+          "forecast_12h": 0,
+          "forecast_24h": 0
+        },
+        "test": {
+          "forecast_1h": 0,
+          "forecast_3h": 0,
+          "forecast_6h": 0,
+          "forecast_12h": 0,
+          "forecast_24h": 0
+        }
+      },
+      "target_counts_by_split": {
+        "train": {
+          "forecast_1h": {
+            "known": 10020,
+            "positive": 240,
+            "negative": 9780,
+            "unknown": 60
+          },
+          "forecast_3h": {
+            "known": 9900,
+            "positive": 720,
+            "negative": 9180,
+            "unknown": 180
+          },
+          "forecast_6h": {
+            "known": 9720,
+            "positive": 1440,
+            "negative": 8280,
+            "unknown": 360
+          },
+          "forecast_12h": {
+            "known": 9360,
+            "positive": 2607,
+            "negative": 6753,
+            "unknown": 720
+          },
+          "forecast_24h": {
+            "known": 8640,
+            "positive": 4539,
+            "negative": 4101,
+            "unknown": 1440
+          }
+        },
+        "validation": {
+          "forecast_1h": {
+            "known": 2100,
+            "positive": 0,
+            "negative": 2100,
+            "unknown": 60
+          },
+          "forecast_3h": {
+            "known": 1980,
+            "positive": 0,
+            "negative": 1980,
+            "unknown": 180
+          },
+          "forecast_6h": {
+            "known": 1800,
+            "positive": 0,
+            "negative": 1800,
+            "unknown": 360
+          },
+          "forecast_12h": {
+            "known": 1440,
+            "positive": 0,
+            "negative": 1440,
+            "unknown": 720
+          },
+          "forecast_24h": {
+            "known": 720,
+            "positive": 0,
+            "negative": 720,
+            "unknown": 1440
+          }
+        },
+        "test": {
+          "forecast_1h": {
+            "known": 2100,
+            "positive": 0,
+            "negative": 2100,
+            "unknown": 60
+          },
+          "forecast_3h": {
+            "known": 1980,
+            "positive": 0,
+            "negative": 1980,
+            "unknown": 180
+          },
+          "forecast_6h": {
+            "known": 1800,
+            "positive": 0,
+            "negative": 1800,
+            "unknown": 360
+          },
+          "forecast_12h": {
+            "known": 1440,
+            "positive": 0,
+            "negative": 1440,
+            "unknown": 720
+          },
+          "forecast_24h": {
+            "known": 720,
+            "positive": 0,
+            "negative": 720,
+            "unknown": 1440
+          }
+        }
+      },
+      "positive_totals": {
+        "forecast_1h": 240,
+        "forecast_3h": 720,
+        "forecast_6h": 1440,
+        "forecast_12h": 2607,
+        "forecast_24h": 4539
+      },
+      "boundary_purged_rows_by_split_and_horizon": {
+        "train": {
+          "forecast_1h": 60,
+          "forecast_3h": 180,
+          "forecast_6h": 360,
+          "forecast_12h": 720,
+          "forecast_24h": 1440
+        },
+        "validation": {
+          "forecast_1h": 60,
+          "forecast_3h": 180,
+          "forecast_6h": 360,
+          "forecast_12h": 720,
+          "forecast_24h": 1440
+        },
+        "test": {
+          "forecast_1h": 60,
+          "forecast_3h": 180,
+          "forecast_6h": 360,
+          "forecast_12h": 720,
+          "forecast_24h": 1440
+        }
+      },
+      "warnings": [],
+      "duration_sec": 0.0912,
+      "status": "complete",
+      "updated_at": 1792523259.2643518
+    }
+  },
+  "feature_columns": [
+    "solexs_flux_scaled",
+    "helios_flux_scaled",
+    "sampling_interval_seconds",
+    "cadence_deviation_fraction",
+    "irregular_sampling",
+    "long_observation_gap",
+    "solexs_missing",
+    "solexs_time_since_valid_min",
+    "solexs_diff1",
+    "solexs_pct_change",
+    "solexs_mean_5m",
+    "solexs_median_5m",
+    "solexs_std_5m",
+    "solexs_min_5m",
+    "solexs_max_5m",
+    "solexs_var_5m",
+    "solexs_p90_5m",
+    "solexs_recent_peak_5m",
+    "solexs_flux_diff_5m",
+    "solexs_slope_5m",
+    "solexs_missing_fraction_5m",
+    "solexs_mean_10m",
+    "solexs_median_10m",
+    "solexs_std_10m",
+    "solexs_min_10m",
+    "solexs_max_10m",
+    "solexs_var_10m",
+    "solexs_p90_10m",
+    "solexs_recent_peak_10m",
+    "solexs_flux_diff_10m",
+    "solexs_slope_10m",
+    "solexs_missing_fraction_10m",
+    "solexs_mean_30m",
+    "solexs_median_30m",
+    "solexs_std_30m",
+    "solexs_min_30m",
+    "solexs_max_30m",
+    "solexs_var_30m",
+    "solexs_p90_30m",
+    "solexs_recent_peak_30m",
+    "solexs_flux_diff_30m",
+    "solexs_slope_30m",
+    "solexs_missing_fraction_30m",
+    "solexs_mean_60m",
+    "solexs_median_60m",
+    "solexs_std_60m",
+    "solexs_min_60m",
+    "solexs_max_60m",
+    "solexs_var_60m",
+    "solexs_p90_60m",
+    "solexs_recent_peak_60m",
+    "solexs_flux_diff_60m",
+    "solexs_slope_60m",
+    "solexs_missing_fraction_60m",
+    "solexs_spike_score",
+    "solexs_spike_flag",
+    "helios_missing",
+    "helios_time_since_valid_min",
+    "helios_diff1",
+    "helios_pct_change",
+    "helios_mean_5m",
+    "helios_median_5m",
+    "helios_std_5m",
+    "helios_min_5m",
+    "helios_max_5m",
+    "helios_var_5m",
+    "helios_p90_5m",
+    "helios_recent_peak_5m",
+    "helios_flux_diff_5m",
+    "helios_slope_5m",
+    "helios_missing_fraction_5m",
+    "helios_mean_10m",
+    "helios_median_10m",
+    "helios_std_10m",
+    "helios_min_10m",
+    "helios_max_10m",
+    "helios_var_10m",
+    "helios_p90_10m",
+    "helios_recent_peak_10m",
+    "helios_flux_diff_10m",
+    "helios_slope_10m",
+    "helios_missing_fraction_10m",
+    "helios_mean_30m",
+    "helios_median_30m",
+    "helios_std_30m",
+    "helios_min_30m",
+    "helios_max_30m",
+    "helios_var_30m",
+    "helios_p90_30m",
+    "helios_recent_peak_30m",
+    "helios_flux_diff_30m",
+    "helios_slope_30m",
+    "helios_missing_fraction_30m",
+    "helios_mean_60m",
+    "helios_median_60m",
+    "helios_std_60m",
+    "helios_min_60m",
+    "helios_max_60m",
+    "helios_var_60m",
+    "helios_p90_60m",
+    "helios_recent_peak_60m",
+    "helios_flux_diff_60m",
+    "helios_slope_60m",
+    "helios_missing_fraction_60m",
+    "helios_spike_score",
+    "helios_spike_flag"
+  ],
+  "cadence_seconds": 60,
+  "artifacts": {
+    "raw": {
+      "file": "raw-70185b99264a45548a00bbccaff01eb0.parquet",
+      "format": "parquet",
+      "sha256": "c7e348db1b289dbc4b9ede849262040e20669d6e57ab47d529ef06d5b0525fbb",
+      "rows": 14401
+    },
+    "cleaned": {
+      "file": "cleaned-89ee3c063cba4648ac08c065b2b5cdac.parquet",
+      "format": "parquet",
+      "sha256": "bd433477a444eec6550903c9cc385ce96a9c6867c388b636dd99f78784483568",
+      "rows": 14400
+    },
+    "aligned": {
+      "file": "aligned-854317a89ed64fde8221f093fb22ebbd.parquet",
+      "format": "parquet",
+      "sha256": "fa66a893cb3c710c7ff9a5f7b9489d4d0ff334e2a90bfff691503efa89359114",
+      "rows": 14400
+    },
+    "transformed": {
+      "file": "transformed-d91335dca2004871ae9922b5b414a45c.parquet",
+      "format": "parquet",
+      "sha256": "dbc20512c153dbf48a98032bd31db8679a5d51528d01f4e1e1e8e37a7f37c529",
+      "rows": 14400
+    },
+    "train": {
+      "file": "train-d7071efbe6d54790a23580885de459b3.parquet",
+      "format": "parquet",
+      "sha256": "c2944b06a30ceb86324cb3274a0482c887b67ff261af07756af19426980e242a",
+      "rows": 10080
+    },
+    "val": {
+      "file": "val-2dcd56f6e1d04ea79da9695bbd84150d.parquet",
+      "format": "parquet",
+      "sha256": "c3b734c0ad807ef16482332f69af14bc4cd285e58cad910220672314f20dfa39",
+      "rows": 2160
+    },
+    "test": {
+      "file": "test-c289b35b73cf4910a957a887cf557d86.parquet",
+      "format": "parquet",
+      "sha256": "bfe4f993e4345b82013d24276fb6abe062014918fa6264fda27f6a1aadbcb68a",
+      "rows": 2160
+    },
+    "transformer": {
+      "file": "transformer-34e4a8e2ebb4422c996e94ffec24db1c.joblib",
+      "format": "joblib",
+      "sha256": "8ca849a2092728c93d6635b1a1cacd6292c6a2f4eeb243047a1d08da9e59e6a3"
+    },
+    "featured": {
+      "file": "featured-d8b01b3cd3ae431a80ed2d90f4537ec8.parquet",
+      "format": "parquet",
+      "sha256": "2495e0a63e60ab76335ff75462fb2dd9939bca07eec551aa19f172cfbdba01b4",
+      "rows": 14400
+    },
+    "labeled": {
+      "file": "labeled-9db853722a0644d8a8edc22979f22fcb.parquet",
+      "format": "parquet",
+      "sha256": "06cf2c7b0135612e85426bc874ea5fdf997d8d5e1e4d04a03f478b42aca90d48",
+      "rows": 14400
+    }
+  }
+}

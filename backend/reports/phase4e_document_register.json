@@ -1,0 +1,218 @@
+{
+  "audit_time_utc": "2026-10-24T20:53:01.808835+00:00",
+  "supersedes_no_prior_register": false,
+  "previous_phase3c_register_path": "E:\\SolarFlareData\\reports\\phase3c_document_register.json",
+  "previous_register_preserved": true,
+  "actual_downloaded_manuals": [
+    {
+      "document": "SoLEXS Data Analysis Guide",
+      "local_path": "C:\\Users\\ASHUTOSH\\Downloads\\SoLEXS-UserManual.pdf",
+      "exists": true,
+      "sha256": "d97c83618c85a0984e7dd0300ce5c16c4748ed5facde525949f902fe9f72abda",
+      "size_bytes": 363311,
+      "page_count": 19,
+      "version_or_date": "Version 1.0",
+      "pdf_metadata": {
+        "Producer": "pdfTeX-1.40.25",
+        "Author": "",
+        "Title": "",
+        "Subject": "",
+        "Creator": "LaTeX with hyperref",
+        "Keywords": "",
+        "CreationDate": "D:20250102185858+05'30'",
+        "ModDate": "D:20250102185858+05'30'",
+        "Trapped": "/False",
+        "PTEX.Fullbanner": "This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) kpathsea version 6.3.5"
+      },
+      "first_page_text": "Aditya-L1 SOLAR LOW ENERGY X-RAY SPECTROMETER (SoLEXS) Data Analysis Guide Version 1.0 U. R. RAO SATELLITE CENTRE INDIAN SPACE RESEARCH ORGANISATION BENGALURU",
+      "source_provenance": "local downloaded copy; file hash verified; retrieval origin not independently authenticated",
+      "relevant_sections": {
+        "PDF p.5; §§2.1.1-2.1.2": "GTI purpose/criteria; Level-1 RATE.TIME Unix Time and COUNTS counts/s over 2-22 keV",
+        "PDF p.6; §2.2 and §2.3": "Unix seconds since 1970-01-01 00:00:00 UTC; daywise product and detector paths/files",
+        "PDF p.7; §2.4": "SoLEXS CALDB provides ARF and RMF response files for spectral analysis",
+        "PDF p.10; §4.1": "Quality flag 1/0 and detector recommendation values apply to Type-I PI spectrum and download filter context"
+      },
+      "scope_limits": [
+        "No GTI START/STOP endpoint closure rule stated in these sections.",
+        "No rule converts RATE counts/s to physical irradiance.",
+        "The Type-I PI QUALITY flag must not be transferred to the RATE light curve.",
+        "No creator/OBS_ID/version-precedence semantics established."
+      ]
+    },
+    {
+      "document": "HEL1OS Data Analysis User Manual",
+      "local_path": "C:\\Users\\ASHUTOSH\\Downloads\\HEL1OS_UserManual.pdf",
+      "exists": true,
+      "sha256": "8efdf3aaf48d8a72cd9d85b567a8c0a6e2655ecf52c5a8d87f36915b741acb4d",
+      "size_bytes": 1540669,
+      "page_count": 55,
+      "version_or_date": "Version 1.2; Jan 2025 (change record through Jan 31, 2025)",
+      "pdf_metadata": {
+        "Creator": "Writer",
+        "Producer": "LibreOffice 7.4",
+        "CreationDate": "D:20250206163214+05'30'"
+      },
+      "first_page_text": "1 Aditya-L1 High Energy L1 Orbiting X-ray Spectrometer (HEL1OS) Data Analysis User Manual Version 1.2 January 2025 Prepared by: HEL1OS Team",
+      "source_provenance": "local downloaded copy; file hash verified; retrieval origin not independently authenticated",
+      "relevant_sections": {
+        "PDF p.4; §§2-2.1": "Level-1 and Level-2 distinction; Level-2 CdTe pile-up correction/CZT saturation filtering; daily dump naming/version field",
+        "PDF p.5; §2.1": "Archive layout, four detector identities, GTI/HK/event products and product roles",
+        "PDF p.6; §§2.2-2.3": "One-second light curves; CALDB response epoch is selected by observation date and detector family",
+        "PDF p.13; Level-1 product inventory (printed p.13)": "Level-1 GTIs span the full data dump and are relevant only to Level-2; may be ignored for Level-1 analysis",
+        "PDF pp.51-52; Appendix B.3": "MJD, ISOT labelled UTC ISO-T corresponding to MJD; CTR and STAT_ERR in cts/sec; detector/band examples",
+        "PDF pp.53-55; Appendix B.4": "Housekeeping field names/types/descriptions including status and pile-up/saturation counters"
+      },
+      "scope_limits": [
+        "MJD's independent time-scale convention/authority is not separately named beyond ISOT being UTC.",
+        "GTI endpoint semantics are not needed for the documented L1 ignore rule but remain unspecified for other uses.",
+        "No V111/V211 precedence rule found.",
+        "HK field names do not define model-quality thresholds or row-rejection logic."
+      ]
+    }
+  ],
+  "existing_registered_documents": [
+    {
+      "coverage_end_utc": null,
+      "coverage_start_utc": null,
+      "dataset_or_document": "Aditya-L1 ALPPS User Guide",
+      "official_source_url": "https://alpps.issdc.gov.in/web/extensions/Aditya-l1/resources/docs/ALPPS_UserGuide_V1.0.pdf",
+      "outstanding_uncertainties": [
+        "Guide covers portal/general process, not detailed SoLEXS/HEL1OS L1 FITS semantics"
+      ],
+      "path_relative_to_data_root_when_possible": "source_docs\\ALPPS_UserGuide_V1.0.pdf",
+      "phase3c_relevance": "general portal access guide only; does not establish instrument-specific L1 semantics",
+      "product_version": "V1.0; effective 2026-01-01",
+      "relevant_metadata": [],
+      "retrieval_date_utc": "2026-10-24",
+      "sha256": "64c33a6f2fb7045e7a2f815f2ed6f3f6f237450bd18e60acf3df93c0dabcb09e",
+      "size_bytes": 4292687,
+      "source_id": "pradan_alpps_guide",
+      "verification_status": "GENERAL_PORTAL_GUIDE_ONLY_INSTRUMENT_PRODUCT_MANUALS_UNAVAILABLE"
+    },
+    {
+      "coverage_end_utc": null,
+      "coverage_start_utc": null,
+      "dataset_or_document": "SoLEXS L1 product manual / SIS",
+      "official_source_url": "https://pradan.issdc.gov.in/al1/",
+      "outstanding_uncertainties": [
+        "No public instrument-specific L1 manual was available unauthenticated; do not infer semantics"
+      ],
+      "path_relative_to_data_root_when_possible": null,
+      "phase3c_relevance": "not retrieved",
+      "product_version": null,
+      "relevant_metadata": [],
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "size_bytes": null,
+      "source_id": "solexs_l1_manual_unavailable",
+      "verification_status": "BLOCKED_REQUIRES_REGISTERED_PRADAN_OTHER_DOWNLOADS"
+    },
+    {
+      "coverage_end_utc": null,
+      "coverage_start_utc": null,
+      "dataset_or_document": "HEL1OS L1 product manual / SIS",
+      "official_source_url": "https://pradan.issdc.gov.in/al1/",
+      "outstanding_uncertainties": [
+        "No public instrument-specific L1 manual was available unauthenticated; do not infer semantics"
+      ],
+      "path_relative_to_data_root_when_possible": null,
+      "phase3c_relevance": "not retrieved",
+      "product_version": null,
+      "relevant_metadata": [],
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "size_bytes": null,
+      "source_id": "hel1os_l1_manual_unavailable",
+      "verification_status": "BLOCKED_REQUIRES_REGISTERED_PRADAN_OTHER_DOWNLOADS"
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "SoLEXS product manual",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_solexs_product_manual",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "SoLEXS SIS",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_solexs_sis",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "SoLEXS GTI/quality/calibration/response documentation",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_solexs_gti_quality_calibration_response_documentation",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "HEL1OS product manual",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_hel1os_product_manual",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "HEL1OS SIS",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_hel1os_sis",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Public PRADAN homepage loaded; Other Downloads navigation redirected to ISSDC sign-in. No signed-in session was available in the task browser.",
+      "dataset_or_document": "HEL1OS GTI/quality/calibration/response documentation",
+      "files_found_in_expected_instrument_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_hel1os_gti_quality_calibration_response_documentation",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    },
+    {
+      "access_observation": "Other Downloads requires ISSDC authentication in the currently available session.",
+      "dataset_or_document": "Aditya-L1 User Handbook / instrument appendices",
+      "files_found_in_expected_general_folder": [],
+      "official_source_url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "path": null,
+      "retrieval_date_utc": null,
+      "sha256": null,
+      "source_id": "phase3c_general_aditya_handbook",
+      "status": "NOT_RETRIEVED_LOGIN_REQUIRED",
+      "version": null
+    }
+  ],
+  "manual_evidence_disposition": "See phase4e_semantics_evidence_matrix.csv; only documentary scopes supported above are promoted.",
+  "phase3c_training_gate": "BLOCKED: remaining partial/unverified critical rules and Phase 3C canonical input directories still need reconciliation.",
+  "rules_verified": 7,
+  "rules_partially_resolved": 6,
+  "rules_still_unverified": 1
+}

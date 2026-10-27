@@ -44,9 +44,9 @@ def test_feature_engineering_hard_to_soft_ratio():
     featured_df = add_rolling_features(transformed_df)
     feat_cols = get_feature_columns(featured_df)
 
-    # Verify Hard-to-Soft Ratio is computed
-    assert "hard_soft_ratio" in featured_df.columns
-    assert any("hard_soft_ratio" in col for col in feat_cols)
+    # Bundled synthetic channels have no verified units/bands; the ratio is disabled.
+    assert "hard_soft_ratio" not in featured_df.columns
+    assert not any("hard_soft_ratio" in col for col in feat_cols)
 
 
 def test_forecast_labels():

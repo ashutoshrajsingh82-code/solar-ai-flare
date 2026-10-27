@@ -1,0 +1,35 @@
+{
+  "model_architecture": "SelfSupervisedCNNLSTM",
+  "task": "native_count_rate_forecasting_may2024",
+  "instrument": "SoLEXS",
+  "detector": "SDD2",
+  "measurement_column": "COUNTS",
+  "measurement_units": "counts/s",
+  "energy_band_kev": "2-22",
+  "input_sequence_length_seconds": 60,
+  "forecast_horizon_seconds": 10,
+  "source_archive": "solexs_2026Oct25T200126271.zip",
+  "source_archive_sha256": "8df85ed75b6f00052d7f45a6764b187c700977f931504fb79fdfe56f10df9db2",
+  "training_dates": [
+    "20240508",
+    "20240509",
+    "20240510",
+    "20240511",
+    "20240512"
+  ],
+  "validation_dates": [
+    "20240513"
+  ],
+  "final_test_dates": [
+    "20240514",
+    "20240515"
+  ],
+  "scaler_mean": 2.741114049896951,
+  "scaler_std": 0.4569025636686742,
+  "best_val_loss_scaled_mse": 0.006586228390583542,
+  "training_duration_seconds": 444.05,
+  "created_at_utc": "2026-10-25T20:31:24.177971+00:00",
+  "checkpoint_sha256": "2680d264e7357162c4950bd5dc554349ce25c8e33ddd524737e505c2aba6632c",
+  "production_registry_eligible": false,
+  "experimental_marker": "PHASE4S_MAY2024_SOLAR_MAX_RESEARCH_ONLY"
+}

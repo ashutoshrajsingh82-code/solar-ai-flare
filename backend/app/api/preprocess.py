@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
+import pandas as pd
 from app.schemas.schemas import PreprocessRequest
 from app.services.pipeline_state import pipeline_state
 from app.services.job_manager import preprocess_jobs
@@ -52,11 +53,15 @@ def list_features():
     if not pipeline_state.feature_columns:
         raise HTTPException(status_code=404, detail="No features generated yet. Run /api/preprocess first.")
     df = pipeline_state.featured_df
-    sample = df[pipeline_state.feature_columns].tail(200).fillna(0)
+    sample = df[pipeline_state.feature_columns].tail(200)
+    recent_values = sample.tail(50).astype(object).where(pd.notna(sample.tail(50)), None)
+    ratio_values = df["hard_soft_ratio"].tail(200).astype(object).where(
+        pd.notna(df["hard_soft_ratio"].tail(200)), None
+    ).tolist() if "hard_soft_ratio" in df.columns else []
     return {
         "feature_columns": pipeline_state.feature_columns,
         "correlation_matrix": sample.corr().round(3).to_dict(),
-        "recent_values": sample.tail(50).to_dict(orient="records"),
-        "hard_soft_ratio_recent": df["hard_soft_ratio"].tail(200).fillna(0).tolist() if "hard_soft_ratio" in df.columns else [],
+        "recent_values": recent_values.to_dict(orient="records"),
+        "hard_soft_ratio_recent": ratio_values,
         "timestamps_recent": df["timestamp"].tail(200).astype(str).tolist(),
     }

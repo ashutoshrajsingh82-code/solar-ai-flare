@@ -48,31 +48,40 @@ export const api = {
   listModels: () => apiClient.get('/api/models').then(r => r.data),
   selectModel: (model_id) => apiClient.post('/api/models/select', { model_id }).then(r => r.data),
   getModelMetrics: (model_id) => apiClient.get(`/api/models/${model_id}/metrics`).then(r => r.data),
+  getModelEvaluation: (model_id, horizon = '1h', threshold = undefined) => apiClient.get(
+    `/api/models/${model_id}/evaluation`, { params: { horizon, ...(threshold === undefined ? {} : { threshold }) } },
+  ).then(r => r.data),
   trainModel: (config) => apiClient.post('/api/models/train', config).then(r => r.data),
   getTrainingJobStatus: (jobId) => apiClient.get(`/api/models/train/${jobId}/status`).then(r => r.data),
 
   // Prediction & Simulation
   predict: (rows, model_id = null) => apiClient.post('/api/predict', { rows, model_id }).then(r => r.data),
   getSimulationState: () => apiClient.get('/api/simulation/state').then(r => r.data),
+  getSimulationReadiness: (model_id = undefined) => apiClient.get('/api/simulation/readiness', { params: model_id ? { model_id } : {} }).then(r => r.data),
   startSimulation: (config = {}) => apiClient.post('/api/simulation/start', {
     model_id: config.model_id || null,
-    sequence_length: config.sequence_length || 30,
+    dataset_id: config.dataset_id || null,
+    replay_start_utc: config.replay_start_utc || null,
+    replay_end_utc: config.replay_end_utc || null,
+    sequence_length: config.sequence_length || 60,
     speed: config.speed || 5,
   }).then(r => r.data),
   pauseSimulation: () => apiClient.post('/api/simulation/pause').then(r => r.data),
   resumeSimulation: () => apiClient.post('/api/simulation/resume').then(r => r.data),
   resetSimulation: () => apiClient.post('/api/simulation/reset').then(r => r.data),
+  stopSimulation: () => apiClient.post('/api/simulation/stop').then(r => r.data),
+  getReplay: (replay_id) => apiClient.get(`/api/simulation/replays/${replay_id}`).then(r => r.data),
+  getReplayPredictions: (replay_id, limit = 500) => apiClient.get(`/api/simulation/replays/${replay_id}/predictions`, { params: { limit } }).then(r => r.data),
   setSimulationSpeed: (speed) => apiClient.post(`/api/simulation/speed/${speed}`).then(r => r.data),
 
   // Experiments
-  getFusionExperiment: (model_type = 'random_forest', epochs = 8, sequence_length = 30) =>
-    apiClient.get(`/api/experiments/fusion?model_type=${model_type}&epochs=${epochs}&sequence_length=${sequence_length}`)
-      .then(r => r.data),
+  getFusionExperiment: () => apiClient.get('/api/experiments/fusion').then(r => r.data),
 
   // Alerts
-  getAlerts: (severity = null, limit = 100) => {
-    const q = severity ? `?severity=${severity}&limit=${limit}` : `?limit=${limit}`;
-    return apiClient.get(`/api/alerts${q}`).then(r => r.data);
+  getAlerts: (severity = null, limit = 100, activeOnly = false) => {
+    const params = new URLSearchParams({ limit: String(limit), active_only: String(activeOnly) });
+    if (severity) params.set('severity', severity);
+    return apiClient.get(`/api/alerts?${params}`).then(r => r.data);
   },
   acknowledgeAlert: (alertId, acknowledged = true) =>
     apiClient.patch(`/api/alerts/${alertId}/acknowledge`, { acknowledged }).then(r => r.data),

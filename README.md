@@ -602,16 +602,34 @@ See [PHASE1_IMPLEMENTATION.md](PHASE1_IMPLEMENTATION.md) for the local model lif
 
 ## Phase 2 persistence notes
 
-Background job status, progress, results, and failures are stored in the configured SQLAlchemy database (`DATABASE_URL`). Existing SQLite databases gain the `background_jobs` table through the non-destructive `create_all()` initialization; existing tables and records are not dropped. Jobs still execute on process-local threads. On startup, pending/running records are marked failed as interrupted; their computation is not resumed.
+Background job status, progress, results, safe configuration, and artifact references are stored in the configured SQLAlchemy database (`DATABASE_URL`). Existing SQLite databases are upgraded additively; existing tables and records are not dropped. The API persists requests and a separate `python -m app.worker` process claims queued jobs. Queued work survives restarts; running work is marked failed when a worker restarts and is not resumed. See [PHASE2D_IMPLEMENTATION.md](PHASE2D_IMPLEMENTATION.md) for the supported single-worker deployment model.
 
 Pipeline DataFrames and fitted preprocessing transformers are stored below `PIPELINE_ARTIFACT_DIR` (default `backend/artifacts/pipeline`) with a versioned JSON manifest, atomic replacement, and SHA-256 verification. Parquet is preferred. If `pyarrow` or `fastparquet` is unavailable, DataFrames use CSV; timestamps are parsed on restoration. The transformer uses the project's existing joblib serialization and is loaded only from the configured local artifact directory after integrity verification. Generated artifacts are ignored by Git.
 
-Local artifacts survive a process restart only while the same disk is retained. Container replacement or ephemeral-host redeployment requires a persistent volume. SQL-backed job history does not make the thread workers or in-memory locks multi-process or distributed; use one backend worker for this design. See [PHASE2_IMPLEMENTATION.md](PHASE2_IMPLEMENTATION.md) for verification and manual restart checks.
+Local artifacts survive a process restart only while the same disk is retained. Container replacement or ephemeral-host redeployment requires a persistent volume. See [PHASE2_IMPLEMENTATION.md](PHASE2_IMPLEMENTATION.md) for the original persistence implementation.
 
 ## Phase 2A real-data ingestion status
 
 Demo mode remains the default. `POST /api/data/upload-real?instrument=solexs&product=lc` accepts a local SoLEXS L1 light-curve FITS/FITS.gz upload and preserves native counts/s, UTC time, file provenance, gap and rejected-row reports. `POST /api/data/upload-goes-labels?coverage_start=...&coverage_end=...` accepts a local NOAA/NCEI GOES XRS L2 Flare Report CSV to attach independently sourced forecast labels to an already loaded real dataset. Native counts are not relabeled as flux and do not pass into the existing model pipeline. HEL1OS ingestion fails closed until its registered product manual and a representative file establish the schema. Real-data forecasting and performance have not been verified. See [the product contract and exact files needed for verification](docs/real_data_ingestion.md) and [the pre-change repository audit](docs/phase2a_audit.md).
 
+### NOAA GOES XRS data acquisition
+
+The API can retrieve current public NOAA SWPC primary GOES XRS rolling JSON products and preserve the original response with a checksum manifest:
+
+```powershell
+Invoke-RestMethod -Method Post "http://localhost:8000/api/data/acquire-goes-xray?product=7-day"
+```
+
+Use `product=6-hour`, `1-day`, `3-day`, or `7-day`. Raw files and manifests are stored under `UPLOAD_STORAGE_DIR\raw\goes_xray`; the result reports the exact UTC coverage and satellite/channel identities. This is a rolling feed, not a historical archive. It does not attach these differently calibrated GOES irradiances to SoLEXS/HEL1OS model features or produce labels. For historical periods, obtain the corresponding archived GOES product from NOAA/NCEI and upload the independently documented flare report CSV with explicit coverage using `/api/data/upload-goes-labels`. For PRADAN data, authenticate at the official portal and download the exact product plus its user guide/calibration documentation, then import a supported SoLEXS FITS light curve using `/api/data/upload-real?instrument=solexs&product=lc`; HEL1OS remains blocked until its real product schema is verified. No real PRADAN product has been imported into this checkout.
+
 ## Phase 2B feature and training safeguards
 
 Forecast targets and labels are excluded from model features, optional STL estimates use trailing data only, and sequence construction preserves unknown labels instead of manufacturing negatives. Training inputs are checked for finite values and class diversity, and inference rejects duplicate timestamps and uses past-only filling. These safeguards do not enable mission-data forecasting: SoLEXS counts are still not calibrated flux, HEL1OS remains gated on a verified product contract, and real-observation model validation has not been performed. See [the Phase 2B implementation and verification report](PHASE2B_IMPLEMENTATION.md).
+
+## Phase 3 Step 12 inference and release validation
+
+Predictions use registry-selected, checksum-verified model artifacts; the saved train-only transformer and ordered feature manifest; and validation-selected forecast thresholds. `POST /api/predict` validates chronological raw rows, returns uncalibrated classification scores with forecast intervals and quality warnings, and persists a payload-minimized result retrievable by prediction ID. `GET /api/models` and `GET /api/models/{model_id}/readiness` report artifact readiness without exposing local paths. Demo alerts and model scores are explicitly labeled; they are not calibrated probabilities or operational warnings. See [the Step 12 operations and limitations guide](docs/phase3_step12_inference.md), and [the generated CPU inference example](backend/reports/phase3_step12_inference_example.json).
+
+## Deployment and acceptance
+
+Compose includes the API, static frontend, one-shot additive database migrations, and the persistent jobs worker. It uses non-root containers, named persistent volumes, internal API networking, and separate process/database/model health checks. See [the PowerShell deployment and acceptance workflow](docs/deployment_acceptance.md) for configuration, startup, migration, API/model checks, inference persistence verification, shutdown, troubleshooting, and current blockers. The bundled model artifacts are legacy demo artifacts; a compatible observationally validated model is not supplied, so ML readiness can correctly remain unavailable.

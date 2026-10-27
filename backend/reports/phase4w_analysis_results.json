@@ -1,0 +1,563 @@
+{
+  "phase": "Phase 4W",
+  "timestamp_utc": "2026-10-26T16:51:29.475094+00:00",
+  "status": "PHASE4W_NEURAL_SKILL_SUPPORTED_IN_DEFINED_REGIMES",
+  "checkpoint_verification": {
+    "task": "checkpoint_verification",
+    "checks": [
+      {
+        "check": "checkpoint_file_exists",
+        "path": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4v\\solexs_phase4v_cnn_lstm_20261026T163620Z.pt",
+        "passed": true
+      },
+      {
+        "check": "checkpoint_sha256_matches",
+        "expected": "e67662368c49f0d110b15e2378c04dceb8df8fbd9936d2b882a028d4fb0bd26d",
+        "actual": "e67662368c49f0d110b15e2378c04dceb8df8fbd9936d2b882a028d4fb0bd26d",
+        "passed": true
+      },
+      {
+        "check": "metadata_file_exists",
+        "path": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4v\\run_metadata.json",
+        "passed": true
+      },
+      {
+        "check": "metadata_sha_matches_checkpoint",
+        "metadata_sha256": "e67662368c49f0d110b15e2378c04dceb8df8fbd9936d2b882a028d4fb0bd26d",
+        "expected": "e67662368c49f0d110b15e2378c04dceb8df8fbd9936d2b882a028d4fb0bd26d",
+        "passed": true
+      },
+      {
+        "check": "training_mode_is_development",
+        "value": "DEVELOPMENT_ONLY_NOT_FINAL_MODEL",
+        "passed": true
+      },
+      {
+        "check": "production_registry_ineligible",
+        "value": false,
+        "passed": true
+      },
+      {
+        "check": "holdout_locked",
+        "value": "LOCKED_NOT_ACQUIRED \u2014 October 2024 not accessed",
+        "passed": true
+      }
+    ],
+    "overall_passed": true
+  },
+  "metric_verification": {
+    "task": "metric_verification",
+    "checks": [
+      {
+        "check": "metrics_csv_exists",
+        "rows": 300,
+        "columns": [
+          "epoch_id",
+          "partition",
+          "cohort",
+          "model",
+          "horizon_step",
+          "n_samples",
+          "mae_counts_per_s",
+          "rmse_counts_per_s",
+          "rel_mae_pct",
+          "target_mean_counts_per_s",
+          "skill_vs_persistence_pct"
+        ],
+        "passed": true
+      },
+      {
+        "check": "required_columns_present",
+        "expected": [
+          "epoch_id",
+          "partition",
+          "cohort",
+          "model",
+          "horizon_step",
+          "n_samples",
+          "mae_counts_per_s",
+          "rmse_counts_per_s",
+          "rel_mae_pct",
+          "target_mean_counts_per_s",
+          "skill_vs_persistence_pct"
+        ],
+        "actual": [
+          "epoch_id",
+          "partition",
+          "cohort",
+          "model",
+          "horizon_step",
+          "n_samples",
+          "mae_counts_per_s",
+          "rmse_counts_per_s",
+          "rel_mae_pct",
+          "target_mean_counts_per_s",
+          "skill_vs_persistence_pct"
+        ],
+        "passed": true
+      },
+      {
+        "check": "persistence_skill_always_zero",
+        "passed": true
+      },
+      {
+        "check": "horizons_1_to_10",
+        "unique_horizons": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "passed": true
+      },
+      {
+        "check": "no_negative_mae",
+        "passed": true
+      },
+      {
+        "check": "mae_leq_rmse",
+        "passed": true
+      },
+      {
+        "check": "skill_computation_consistent",
+        "mismatches_count": 0,
+        "passed": true
+      }
+    ],
+    "overall_passed": true
+  },
+  "cross_model_comparison": {
+    "task": "cross_model_comparison",
+    "phase4s_summary": {
+      "may2024_ALL_H1_MAE": 75.1188,
+      "may2024_ALL_H10_MAE": 78.8614,
+      "may2024_ALL_H1_skill": -128.72,
+      "may2024_ALL_H10_skill": -111.07,
+      "may2024_QUIET_H1_MAE": 12.686,
+      "may2024_QUIET_H1_skill": 1.68
+    },
+    "comparison_table": [
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "horizon": 1,
+        "phase4v_mae": 49.6287,
+        "phase4v_skill": -51.11
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "horizon": 1,
+        "phase4v_mae": 12.4879,
+        "phase4v_skill": 20.99
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "horizon": 10,
+        "phase4v_mae": 54.0398,
+        "phase4v_skill": -44.64
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "horizon": 10,
+        "phase4v_mae": 12.8485,
+        "phase4v_skill": 20.71
+      }
+    ],
+    "cohort_summary": [
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "horizon": 1,
+        "n_samples": 172439,
+        "cnn_mae": 49.6287,
+        "cnn_skill_pct": -51.11,
+        "target_mean": 1105.255
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "horizon": 10,
+        "n_samples": 172439,
+        "cnn_mae": 54.0398,
+        "cnn_skill_pct": -44.64,
+        "target_mean": 1105.255
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "horizon": 1,
+        "n_samples": 44221,
+        "cnn_mae": 12.4879,
+        "cnn_skill_pct": 20.99,
+        "target_mean": 281.598
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "horizon": 10,
+        "n_samples": 44221,
+        "cnn_mae": 12.8485,
+        "cnn_skill_pct": 20.71,
+        "target_mean": 281.598
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 1,
+        "n_samples": 60267,
+        "cnn_mae": 10.5263,
+        "cnn_skill_pct": 23.05,
+        "target_mean": 142.101
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 10,
+        "n_samples": 60267,
+        "cnn_mae": 10.3718,
+        "cnn_skill_pct": 24.28,
+        "target_mean": 142.101
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 1,
+        "n_samples": 29592,
+        "cnn_mae": 7.2093,
+        "cnn_skill_pct": 22.3,
+        "target_mean": 72.081
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 10,
+        "n_samples": 29592,
+        "cnn_mae": 7.3436,
+        "cnn_skill_pct": 21.96,
+        "target_mean": 72.081
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_MOD",
+        "horizon": 1,
+        "n_samples": 77643,
+        "cnn_mae": 18.0084,
+        "cnn_skill_pct": 23.66,
+        "target_mean": 382.424
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_MOD",
+        "horizon": 10,
+        "n_samples": 77643,
+        "cnn_mae": 18.1777,
+        "cnn_skill_pct": 23.79,
+        "target_mean": 382.424
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_MOD",
+        "horizon": 1,
+        "n_samples": 10612,
+        "cnn_mae": 18.0136,
+        "cnn_skill_pct": 22.48,
+        "target_mean": 428.277
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_MOD",
+        "horizon": 10,
+        "n_samples": 10612,
+        "cnn_mae": 19.4214,
+        "cnn_skill_pct": 20.49,
+        "target_mean": 428.277
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_HIGH",
+        "horizon": 1,
+        "n_samples": 34529,
+        "cnn_mae": 188.9802,
+        "cnn_skill_pct": -116.96,
+        "target_mean": 4411.729
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_HIGH",
+        "horizon": 10,
+        "n_samples": 34529,
+        "cnn_mae": 210.8984,
+        "cnn_skill_pct": -93.41,
+        "target_mean": 4411.729
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_HIGH",
+        "horizon": 1,
+        "n_samples": 4017,
+        "cnn_mae": 36.7757,
+        "cnn_skill_pct": 16.9,
+        "target_mean": 1437.556
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_HIGH",
+        "horizon": 10,
+        "n_samples": 4017,
+        "cnn_mae": 36.0371,
+        "cnn_skill_pct": 19.11,
+        "target_mean": 1437.556
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_SURGE_50",
+        "horizon": 1,
+        "n_samples": 13136,
+        "cnn_mae": 172.3622,
+        "cnn_skill_pct": -102.92,
+        "target_mean": 3885.041
+      },
+      {
+        "epoch": "EPOCH1_MAY2024",
+        "cohort": "Causal_SURGE_50",
+        "horizon": 10,
+        "n_samples": 13136,
+        "cnn_mae": 218.9879,
+        "cnn_skill_pct": -65.54,
+        "target_mean": 3885.041
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_SURGE_50",
+        "horizon": 1,
+        "n_samples": 1296,
+        "cnn_mae": 30.1581,
+        "cnn_skill_pct": 34.18,
+        "target_mean": 1073.689
+      },
+      {
+        "epoch": "EPOCH2_FEB2026",
+        "cohort": "Causal_SURGE_50",
+        "horizon": 10,
+        "n_samples": 1296,
+        "cnn_mae": 33.0222,
+        "cnn_skill_pct": 26.73,
+        "target_mean": 1073.689
+      }
+    ]
+  },
+  "error_analysis": {
+    "task": "error_analysis",
+    "surge_analysis": [
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "all_mae": 49.6287,
+        "all_skill": -51.11,
+        "quiet_mae": 10.5263,
+        "quiet_skill": 23.05,
+        "quiet_n": 60267,
+        "high_mae": 188.9802,
+        "high_skill": -116.96,
+        "high_n": 34529,
+        "surge_mae": 172.3622,
+        "surge_skill": -102.92,
+        "surge_n": 13136
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "all_mae": 12.4879,
+        "all_skill": 20.99,
+        "quiet_mae": 7.2093,
+        "quiet_skill": 22.3,
+        "quiet_n": 29592,
+        "high_mae": 36.7757,
+        "high_skill": 16.9,
+        "high_n": 4017,
+        "surge_mae": 30.1581,
+        "surge_skill": 34.18,
+        "surge_n": 1296
+      }
+    ],
+    "horizon_sensitivity": [
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "skill_h1": -51.11,
+        "skill_h10": -44.64,
+        "skill_slope_per_step": 0.917,
+        "mae_h1": 49.6287,
+        "mae_h10": 54.0398,
+        "mae_increase_pct": 8.89
+      },
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_QUIET",
+        "skill_h1": 23.05,
+        "skill_h10": 24.28,
+        "skill_slope_per_step": 0.02,
+        "mae_h1": 10.5263,
+        "mae_h10": 10.3718,
+        "mae_increase_pct": -1.47
+      },
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_MOD",
+        "skill_h1": 23.66,
+        "skill_h10": 23.79,
+        "skill_slope_per_step": -0.026,
+        "mae_h1": 18.0084,
+        "mae_h10": 18.1777,
+        "mae_increase_pct": 0.94
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "skill_h1": 20.99,
+        "skill_h10": 20.71,
+        "skill_slope_per_step": -0.169,
+        "mae_h1": 12.4879,
+        "mae_h10": 12.8485,
+        "mae_increase_pct": 2.89
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_QUIET",
+        "skill_h1": 22.3,
+        "skill_h10": 21.96,
+        "skill_slope_per_step": -0.186,
+        "mae_h1": 7.2093,
+        "mae_h10": 7.3436,
+        "mae_increase_pct": 1.86
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_MOD",
+        "skill_h1": 22.48,
+        "skill_h10": 20.49,
+        "skill_slope_per_step": -0.334,
+        "mae_h1": 18.0136,
+        "mae_h10": 19.4214,
+        "mae_increase_pct": 7.82
+      }
+    ],
+    "rmse_mae_ratio": [
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "ALL",
+        "mae": 49.6287,
+        "rmse": 267.7906,
+        "rmse_mae_ratio": 5.396,
+        "interpretation": "heavy-tailed"
+      },
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_QUIET",
+        "mae": 10.5263,
+        "rmse": 13.3752,
+        "rmse_mae_ratio": 1.271,
+        "interpretation": "near-Gaussian"
+      },
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "Causal_REG_HIGH",
+        "mae": 188.9802,
+        "rmse": 597.1367,
+        "rmse_mae_ratio": 3.16,
+        "interpretation": "heavy-tailed"
+      },
+      {
+        "epoch_id": "EPOCH1_MAY2024",
+        "cohort": "Causal_SURGE_50",
+        "mae": 172.3622,
+        "rmse": 614.919,
+        "rmse_mae_ratio": 3.568,
+        "interpretation": "heavy-tailed"
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "ALL",
+        "mae": 12.4879,
+        "rmse": 19.6046,
+        "rmse_mae_ratio": 1.57,
+        "interpretation": "moderate"
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_QUIET",
+        "mae": 7.2093,
+        "rmse": 9.4899,
+        "rmse_mae_ratio": 1.316,
+        "interpretation": "near-Gaussian"
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "Causal_REG_HIGH",
+        "mae": 36.7757,
+        "rmse": 46.3506,
+        "rmse_mae_ratio": 1.26,
+        "interpretation": "near-Gaussian"
+      },
+      {
+        "epoch_id": "EPOCH2_FEB2026",
+        "cohort": "Causal_SURGE_50",
+        "mae": 30.1581,
+        "rmse": 39.2643,
+        "rmse_mae_ratio": 1.302,
+        "interpretation": "near-Gaussian"
+      }
+    ],
+    "cross_epoch_consistency": [
+      {
+        "cohort": "ALL",
+        "horizon": 1,
+        "epoch1_skill": -51.11,
+        "epoch2_skill": 20.99,
+        "skill_consistent": "False"
+      },
+      {
+        "cohort": "ALL",
+        "horizon": 10,
+        "epoch1_skill": -44.64,
+        "epoch2_skill": 20.71,
+        "skill_consistent": "False"
+      },
+      {
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 1,
+        "epoch1_skill": 23.05,
+        "epoch2_skill": 22.3,
+        "skill_consistent": "True"
+      },
+      {
+        "cohort": "Causal_REG_QUIET",
+        "horizon": 10,
+        "epoch1_skill": 24.28,
+        "epoch2_skill": 21.96,
+        "skill_consistent": "True"
+      },
+      {
+        "cohort": "Causal_REG_MOD",
+        "horizon": 1,
+        "epoch1_skill": 23.66,
+        "epoch2_skill": 22.48,
+        "skill_consistent": "True"
+      },
+      {
+        "cohort": "Causal_REG_MOD",
+        "horizon": 10,
+        "epoch1_skill": 23.79,
+        "epoch2_skill": 20.49,
+        "skill_consistent": "True"
+      }
+    ]
+  }
+}

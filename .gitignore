@@ -8,8 +8,11 @@ env/
 venv/
 ENV/
 .env
+**/.env
+!.env.example
 *.db
 *.sqlite3
+*.sqlite
 
 # Models & intermediate artifacts
 backend/artifacts/pipeline/
@@ -19,9 +22,12 @@ ml/saved_models/*.joblib
 ml/saved_models/*.pt
 !ml/saved_models/.gitkeep
 uploaded_data/
+backend/data/
 
 # Testing & logs
 .pytest_cache/
+.pytest-*/
+backend/.pytest-*/
 .coverage
 htmlcov/
 *.log
@@ -41,3 +47,11 @@ Thumbs.db
 backend/phase2c_partial_labels_backup_*/
 backend/pytest.ini
 backend-phase2c-patch.zip
+
+# Credentials, cookies and session tokens
+*credentials*
+*token*
+*cookie*
+*session*
+.pradan_session*
+pradan_cookies.txt

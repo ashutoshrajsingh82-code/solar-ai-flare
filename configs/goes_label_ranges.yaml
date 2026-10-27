@@ -1,0 +1,29 @@
+# Configuration of GOES observation date ranges for multi-month labeling
+# Note: October 2024 is quarantined and strictly excluded.
+
+target_ranges:
+  - name: "solar_max_2024_pre_holdout"
+    start_date: "2024-05-01"
+    end_date: "2024-09-30"
+    description: "Solar Cycle 25 maximum leading up to pre-holdout period"
+
+  - name: "solar_cycle_2024_2026_post_holdout"
+    start_date: "2024-11-01"
+    end_date: "2026-09-30"
+    description: "Post-holdout operational monitoring and active cycle 25 period"
+
+# Quarantined holdout - MUST NEVER BE ACCESSED OR OVERLAPPED
+quarantined_holdout:
+  name: "october_2024_holdout"
+  start_date: "2024-10-01"
+  end_date: "2024-10-31"
+  status: "STRICTLY_SEALED_DO_NOT_TOUCH"
+
+label_generation_params:
+  cadence: "1min"
+  preflare_minutes: 30
+  min_class_preflare: "C"
+  target_min_class: "M"
+  mask_ongoing_min_class: "C"
+  horizons_hours: [1, 3, 6, 12, 24]
+  max_gap_minutes: 10.0

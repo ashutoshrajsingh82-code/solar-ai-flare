@@ -1,0 +1,199 @@
+{
+  "generator": "phase4h_data_readiness_v1",
+  "audit_time_utc": "2026-10-25T10:29:33.401274+00:00",
+  "canonical_input": {
+    "summary": "reports\\phase4j_phase3c_canonical\\phase3c_audit_summary.json",
+    "summary_sha256": "9e09acfd2ffef560d8b4bb39b9cf8b1afbb18835010be844419097479095437e",
+    "document_register": "reports\\phase4j_phase3c_canonical\\phase3c_document_register.json",
+    "document_register_sha256": "c09b191035df8f6096659957e5f9d206481308630ebb893dde2877875045c43d"
+  },
+  "canonical_readiness_status": "BLOCKED_SCIENTIFIC_SEMANTICS_UNRESOLVED",
+  "rule_counts": {
+    "verified": 7,
+    "partially_resolved": 6,
+    "unresolved_or_conflicting": 1
+  },
+  "document_hash_validation": [
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\CAL_epoch20231001_CdTeResponseReader.zip",
+      "expected_sha256": "66f3862f832d501de6a3a515d3176a20e8b7432aedc57b473dda5d6f94d9396c",
+      "actual_sha256": "66f3862f832d501de6a3a515d3176a20e8b7432aedc57b473dda5d6f94d9396c",
+      "matches": true,
+      "size_bytes": 382464
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\CAL_epoch20231001_CZTResponseReader.zip",
+      "expected_sha256": "aece8c94880c3c75737d55d4afb374ae0343fb70723d5d8722d1619b00f3a18a",
+      "actual_sha256": "aece8c94880c3c75737d55d4afb374ae0343fb70723d5d8722d1619b00f3a18a",
+      "matches": true,
+      "size_bytes": 423050
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\hel1os-level2proc.zip",
+      "expected_sha256": "4a6a0f3853acaf1b4bad242b620110ede545a81dac01e0bee9fd68bc218e518d",
+      "actual_sha256": "4a6a0f3853acaf1b4bad242b620110ede545a81dac01e0bee9fd68bc218e518d",
+      "matches": true,
+      "size_bytes": 13617
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\HEL1OS_Level2DataProcessingPackage.pdf",
+      "expected_sha256": "8039a4fcb4dff8d34c06904431036f19752f8cd4f9c4143038c17478d996c127",
+      "actual_sha256": "8039a4fcb4dff8d34c06904431036f19752f8cd4f9c4143038c17478d996c127",
+      "matches": true,
+      "size_bytes": 240657
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\HEL1OS_ReleaseNotes.pdf",
+      "expected_sha256": "f9955c56e66f0465a1dda77ca4ed416e35771a71911cf2a24a4937d2c61167a7",
+      "actual_sha256": "f9955c56e66f0465a1dda77ca4ed416e35771a71911cf2a24a4937d2c61167a7",
+      "matches": true,
+      "size_bytes": 155454
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\HEL1OS_UserManual.pdf",
+      "expected_sha256": "8efdf3aaf48d8a72cd9d85b567a8c0a6e2655ecf52c5a8d87f36915b741acb4d",
+      "actual_sha256": "8efdf3aaf48d8a72cd9d85b567a8c0a6e2655ecf52c5a8d87f36915b741acb4d",
+      "matches": true,
+      "size_bytes": 1540669
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\Level2-Product_HEL1OS_HardXRay_40-150keV_FlareCatalog.pdf",
+      "expected_sha256": "a9f86bdbf61d32810355824babe676cf1d9f5b88e9970cff49935d23fec83a80",
+      "actual_sha256": "a9f86bdbf61d32810355824babe676cf1d9f5b88e9970cff49935d23fec83a80",
+      "matches": true,
+      "size_bytes": 318775
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\Level2-Product_HEL1OS_SEP_ContaminationTimes_Catalog.pdf",
+      "expected_sha256": "e9cf89a202b4aafde9ebd577f36456556a569c276c92b6b757339e306c274c0a",
+      "actual_sha256": "e9cf89a202b4aafde9ebd577f36456556a569c276c92b6b757339e306c274c0a",
+      "matches": true,
+      "size_bytes": 527088
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\solexs\\SoLEXS-UserManual.pdf",
+      "expected_sha256": "d97c83618c85a0984e7dd0300ce5c16c4748ed5facde525949f902fe9f72abda",
+      "actual_sha256": "d97c83618c85a0984e7dd0300ce5c16c4748ed5facde525949f902fe9f72abda",
+      "matches": true,
+      "size_bytes": 363311
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\solexs\\SoLEXS_Release_Updates.txt",
+      "expected_sha256": "7fc0229985fef2bd60ab23bc554c09e64f526719f11825e44a60eed12f5396ce",
+      "actual_sha256": "7fc0229985fef2bd60ab23bc554c09e64f526719f11825e44a60eed12f5396ce",
+      "matches": true,
+      "size_bytes": 2481
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\solexs\\solexs_tools-1.1.tar.gz",
+      "expected_sha256": "348014aefa50ade556ec4a160a3cfe0b08095bde84b4650a27d6b5d3bf7fa2d3",
+      "actual_sha256": "348014aefa50ade556ec4a160a3cfe0b08095bde84b4650a27d6b5d3bf7fa2d3",
+      "matches": true,
+      "size_bytes": 19730838
+    }
+  ],
+  "document_hash_mismatches": [],
+  "official_access_routes": [
+    {
+      "title": "PRADAN Aditya-L1 FAQ",
+      "issuer": "ISSDC/ISTRAC",
+      "url": "https://pradan1.issdc.gov.in/al1/faq.xhtml",
+      "access_outcome": "PUBLICLY_ACCESSIBLE_REVIEWED",
+      "supports": "Access route only",
+      "limitations": "HEL1OS FAQ directs technical specifications to protected OtherDownloads; no field-level contract."
+    },
+    {
+      "title": "Aditya-L1 Proposal Processing System User Guide V1.0",
+      "issuer": "ISSDC",
+      "url": "https://alpps.issdc.gov.in/web/extensions/Aditya-l1/resources/docs/ALPPS_UserGuide_V1.0.pdf",
+      "access_outcome": "PUBLICLY_ACCESSIBLE_REVIEWED",
+      "supports": "POC/public-product context",
+      "limitations": "No GTI, time-field, quality-bit, response-conversion, or version-precedence contract."
+    },
+    {
+      "title": "PRADAN Other Downloads",
+      "issuer": "ISSDC",
+      "url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "access_outcome": "AUTHENTICATED_ACCESS_SUCCEEDED",
+      "supports": "Official route for instrument handbook/SIS/release material",
+      "limitations": "Authenticated normal-use acquisition succeeded for the registered Phase 4I artifacts; no access control was bypassed. The acquired artifacts still do not include the missing Level-1 SIS/endpoint/flag/precedence contracts."
+    }
+  ],
+  "readiness_checks": [
+    {
+      "item": "Canonical source-document provenance",
+      "status": "PASS",
+      "evidence": "Registered manual paths and SHA-256 values in canonical document register.",
+      "rationale": "Only hash-matching local canonical documents may support adjudication."
+    },
+    {
+      "item": "Archive structural inventory",
+      "status": "PASS",
+      "evidence": "Phase 4E: 178 structurally readable FITS products, 0 inspection failures; extraction/filtering disabled.",
+      "rationale": "Structural readability is not scientific eligibility."
+    },
+    {
+      "item": "Valid observation timestamps and time reference",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS Unix-time claim is scoped; HEL1OS MJD/ISOT authority and disagreement handling remain partial.",
+      "rationale": "No combined observation-time policy is established."
+    },
+    {
+      "item": "Applicable GTI intervals and endpoint semantics",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS endpoint contract is missing; HEL1OS L1 GTI can be ignored only in the documented L1 scope.",
+      "rationale": "No GTI mask or endpoint convention may be applied."
+    },
+    {
+      "item": "Quality and saturation handling",
+      "status": "BLOCKED",
+      "evidence": "Candidate HEL1OS HK/status fields were structurally inventoried, but no L1 bit meaning, threshold, or rejection rule is documented.",
+      "rationale": "Missing metadata is not evidence of clean data."
+    },
+    {
+      "item": "Instrument/product/version precedence",
+      "status": "BLOCKED",
+      "evidence": "Fourteen HEL1OS V111/V211 counterpart groups have no authoritative supersession rule.",
+      "rationale": "Products remain separate; row counts and apparent recency are not precedence evidence."
+    },
+    {
+      "item": "Calibration eligibility and physical-flux conversion",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS manual identifies ARF/RMF for spectral analysis but no applicable RATE-to-irradiance conversion; HEL1OS response policy remains incomplete.",
+      "rationale": "Count rate is not promoted to physical flux."
+    },
+    {
+      "item": "Observation coverage and gaps",
+      "status": "BLOCKED",
+      "evidence": "Inventory includes 6 SoLEXS and 44 HEL1OS light curves, but valid exposure rules are incomplete.",
+      "rationale": "File presence and raw rows do not establish usable coverage."
+    },
+    {
+      "item": "Verified flare-event labels and provenance",
+      "status": "BLOCKED",
+      "evidence": "Phase 3B records 123 reference events, but instrument interval overlap is not verified.",
+      "rationale": "Reference catalog provenance does not establish instrument-positive windows."
+    },
+    {
+      "item": "Completeness of negative labels",
+      "status": "BLOCKED",
+      "evidence": "Canonical summary explicitly records negative-label completeness as false.",
+      "rationale": "Unobserved or uncatalogued intervals are not negative examples."
+    },
+    {
+      "item": "Chronological split feasibility without leakage",
+      "status": "BLOCKED",
+      "evidence": "Canonical summary: no final split boundaries; verified joint windows = 0.",
+      "rationale": "No eligible observation/label population exists for a leakage assessment."
+    }
+  ],
+  "safety": {
+    "training_or_tuning_performed": false,
+    "evaluation_performed": false,
+    "production_checkpoint_activity": false,
+    "production_activation": false,
+    "gti_or_quality_filters_applied": false,
+    "version_counterparts_merged": false,
+    "negative_labels_promoted": false
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "manifest_version": 1,
+  "feature_registry_version": "feature-registry-v2",
+  "feature_schema_version": "causal-time-aware-v2",
+  "input_configuration": "fusion",
+  "ordered_feature_names": [
+    "solexs_flux_scaled",
+    "helios_flux_scaled"
+  ],
+  "features": [
+    {
+      "name": "solexs_flux_scaled",
+      "description_formula": "Input measurement or training-scaled solexs_flux value.",
+      "source_columns": [
+        "solexs_flux"
+      ],
+      "source_instruments": [
+        "SoLEXS"
+      ],
+      "physical_quantity": null,
+      "units": null,
+      "energy_band_kev": null,
+      "rolling_window_minutes": null,
+      "minimum_history_samples": null,
+      "availability": "at_observation_timestamp; causal/trailing",
+      "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+      "causal": true,
+      "feature_version": "causal-time-aware-v2",
+      "provenance_known": true,
+      "allowed_experiments": [
+        "SoLEXS"
+      ]
+    },
+    {
+      "name": "helios_flux_scaled",
+      "description_formula": "Input measurement or training-scaled helios_flux value.",
+      "source_columns": [
+        "helios_flux"
+      ],
+      "source_instruments": [
+        "HEL1OS"
+      ],
+      "physical_quantity": null,
+      "units": null,
+      "energy_band_kev": null,
+      "rolling_window_minutes": null,
+      "minimum_history_samples": null,
+      "availability": "at_observation_timestamp; causal/trailing",
+      "missing_value_policy": "retain NaN; model rows/windows require explicit valid inputs",
+      "causal": true,
+      "feature_version": "causal-time-aware-v2",
+      "provenance_known": true,
+      "allowed_experiments": [
+        "HEL1OS"
+      ]
+    }
+  ],
+  "feature_config": {
+    "cadence_seconds": 60,
+    "windows_minutes": [
+      5,
+      10,
+      30,
+      60
+    ],
+    "compute_stl": false,
+    "stl_period_minutes": 60,
+    "min_rolling_samples": 2,
+    "min_rolling_fraction": 0.33,
+    "spike_lookback_minutes": 10,
+    "spike_min_samples": 5,
+    "spike_threshold": 6.0,
+    "irregular_tolerance_fraction": 0.25,
+    "long_gap_multiplier": 3.0,
+    "enable_hard_soft_ratio": false,
+    "channel_metadata": null,
+    "quality_columns": null
+  },
+  "instrument_selection": "fusion",
+  "ratio_metadata": {
+    "enabled": false,
+    "invalid_ratio_count": 0,
+    "reason": "disabled by default: no validated channel metadata supplied"
+  },
+  "source_data_fingerprint": "fb845ed4273bc77326ac3975ca6cc0b22e736f3b00f444c715d9d571b399506f",
+  "training_period": {
+    "start_utc": "2026-08-01T00:00:00+00:00",
+    "end_utc": "2026-08-07T23:59:00+00:00",
+    "rows": 10080
+  },
+  "validation_period": {
+    "start_utc": "2026-08-08T00:00:00+00:00",
+    "end_utc": "2026-08-09T11:59:00+00:00",
+    "rows": 2160
+  },
+  "test_period": {
+    "start_utc": "2026-08-09T12:00:00+00:00",
+    "end_utc": "2026-08-10T23:59:00+00:00",
+    "rows": 2160
+  },
+  "preprocessing": {
+    "scaler_type": "standard",
+    "log_transform": true,
+    "fit_on": "train_split_only"
+  },
+  "decomposition": null,
+  "random_seed": 42,
+  "dependencies": {
+    "numpy": "2.5.2",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.0",
+    "statsmodels": "0.15.0"
+  }
+}

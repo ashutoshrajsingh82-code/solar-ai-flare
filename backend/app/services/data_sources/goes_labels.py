@@ -163,6 +163,13 @@ def read_goes_flare_report_csv(
         "input_rows": int(len(raw)),
         "accepted_rows": int(len(accepted)),
         "rejected_rows": int(invalid.sum()),
+        "flare_class_counts": {
+            str(key): int(value)
+            for key, value in accepted["flare_class_group"].value_counts().sort_index().items()
+        },
+        "significant_mx_event_count": int(
+            accepted["flare_class_group"].isin(("M", "X")).sum()
+        ),
         "rejected_row_indices": raw.index[invalid].astype(int).tolist(),
         "rejection_reasons": rejected,
         "known_limitations": [

@@ -1,0 +1,65 @@
+{
+  "adapter_review_findings": [
+    "SoLEXS adapter accepts missing TIME and COUNTS TUNIT metadata and labels COUNTS as counts/s using a publicly discoverable manual; the local archives omit both column units. This project does not treat that repost as the registered product contract.",
+    "SoLEXS adapter converts TIME directly as Unix seconds and assigns 2-22 keV/one-second cadence without a registered matching product manual in the current evidence set.",
+    "SoLEXS adapter does not apply the matching GTI companions. HEL1OS adapter remains fail-closed.",
+    "No adapter change was made because the documentary basis needed to implement a valid conversion/GTI/quality policy is unavailable; the readiness gate remains blocked."
+  ],
+  "audit_time_utc": "2026-10-24T16:41:31.286333+00:00",
+  "coverage_and_window_counts": {
+    "negative_windows": null,
+    "positive_windows": null,
+    "reason": "No Aditya instrument samples have documented time reference, GTI, quality and calibration rules; negative-label completeness is not established.",
+    "verified_hel1os_samples": null,
+    "verified_joint_windows": 0,
+    "verified_solexs_samples": null
+  },
+  "final_split_boundaries_defined": false,
+  "generator": "phase3c_semantics_audit_v1",
+  "goes_event_reference": {
+    "candidate_event_matches_do_not_verify_instrument_interval_overlap": true,
+    "class_counts": {
+      "C": 50,
+      "M": 67,
+      "X": 6
+    },
+    "negative_label_completeness_established": false,
+    "verified_report_records": 123
+  },
+  "matrix_rule_count": 14,
+  "matrix_verified_rules": 0,
+  "observed_archive_inventory": {
+    "hel1os_extension_counts": {
+      "CDTE1_LC_BAND_5.00KEV_TO_20.00KEV": 11,
+      "CDTE2_LC_BAND_5.00KEV_TO_20.00KEV": 11,
+      "CZT1_LC_BAND_20.00KEV_TO_40.00KEV": 11,
+      "CZT2_LC_BAND_20.00KEV_TO_40.00KEV": 11
+    },
+    "hel1os_gti_tables": 44,
+    "hel1os_lightcurves": 44,
+    "hel1os_mjd_isot_rows_within_1ms_under_provisional_utc": 44000,
+    "hel1os_mjd_isot_sample_rows": 44000,
+    "hel1os_nested_archives": 11,
+    "hel1os_versions": {
+      "V111": 40,
+      "V211": 4
+    },
+    "raw_archives_modified_or_extracted": false,
+    "solexs_candidate_rows_unverified": 272223,
+    "solexs_detector_counts": {
+      "SDD2": 6
+    },
+    "solexs_gti_tables": 12,
+    "solexs_lightcurves": 6,
+    "solexs_nested_archives": 6,
+    "solexs_raw_rows": 518400
+  },
+  "phase3a_sha256": "085f6f4a9a56827442159e589570f994a90abb36a731c8e5c95f43ef99e7b1ac",
+  "phase3b_sha256": "3d831545785dff80831754996688553297da3ff23239dc7870e3e241eae65de4",
+  "production_adapter_rules_changed": false,
+  "readiness_status": "BLOCKED_DOCUMENTATION_UNAVAILABLE",
+  "reason": "The registered PRADAN Other Downloads area redirects to ISSDC sign-in; no instrument manuals/SIS were retrieved. Critical instrument timing, GTI, measurement, quality/calibration, and version rules remain unverified.",
+  "repository": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main",
+  "training_started": false,
+  "tuning_or_evaluation_started": false
+}

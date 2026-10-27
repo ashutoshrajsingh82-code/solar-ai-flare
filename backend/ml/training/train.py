@@ -10,6 +10,8 @@ Handles:
 """
 import os
 import time
+import random
+import copy
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,6 +37,17 @@ class TrainConfig:
     n_channels: int = 2
     device: str = "cpu"
     random_seed: int = 42
+    early_stopping_patience: int = 5
+    minimum_improvement: float = 1e-4
+    scheduler_patience: int = 2
+    scheduler_factor: float = 0.5
+    minimum_learning_rate: float = 1e-6
+    deterministic: bool = True
+    # Preserve temporal sample order by default. Each window itself is always
+    # ordered oldest-to-newest; callers may opt into window-order shuffling.
+    shuffle_train_windows: bool = False
+    dlstm_hidden_size: int = 64
+    dlstm_num_layers: int = 2
 
 
 def _limit_torch_threads(max_threads: int = 4) -> None:
@@ -66,8 +79,22 @@ def compute_pos_weights(y_forecast: np.ndarray) -> torch.Tensor:
     pos = np.sum((y_forecast == 1) & known, axis=0).astype(float)
     neg = np.sum((y_forecast == 0) & known, axis=0).astype(float)
     if np.any(pos == 0):
-        raise ValueError("Each training forecast horizon needs known positive examples.")
+        absent = np.flatnonzero(pos == 0).tolist()
+        raise ValueError(f"Training forecast horizons {absent} have no known positive examples.")
     return torch.tensor(neg / pos, dtype=torch.float32)
+
+
+def seed_everything(seed: int, deterministic: bool = True):
+    """Seed process RNGs used by PyTorch training and record determinism policy."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(bool(deterministic), warn_only=True)
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.deterministic = bool(deterministic)
+        torch.backends.cudnn.benchmark = not bool(deterministic)
 
 
 def _masked_forecast_loss(logits, targets, pos_weights=None):
@@ -99,21 +126,33 @@ def train_deep_model(
     validate_training_data(X_train, y_now_train, y_fc_train, X_val, y_now_val, y_fc_val)
     if cfg.batch_size <= 0 or cfg.epochs <= 0 or cfg.learning_rate <= 0:
         raise ValueError("Training batch_size, epochs, and learning_rate must be positive.")
+    if cfg.early_stopping_patience < 0 or cfg.scheduler_patience < 0 or cfg.minimum_improvement < 0:
+        raise ValueError("Early-stopping/scheduler patience and minimum improvement must be non-negative.")
+    positive_counts = np.sum((np.asarray(y_fc_train) == 1) & np.isfinite(y_fc_train), axis=0)
+    if np.any(positive_counts == 0):
+        raise ValueError(f"Training data has no positive examples for forecast horizons {np.flatnonzero(positive_counts).tolist()}.")
     if cfg.n_channels <= 0 or np.asarray(X_train).shape[2] != cfg.n_channels:
         raise ValueError("Training sequence channel count does not match the model configuration.")
     if cfg.sequence_length <= 0 or np.asarray(X_train).shape[1] != cfg.sequence_length:
         raise ValueError("Training sequence length does not match the model configuration.")
     if not 0 <= cfg.dropout < 1 or cfg.alpha < 0 or cfg.beta < 0 or cfg.alpha + cfg.beta == 0:
         raise ValueError("Training dropout and loss weights are outside their valid ranges.")
-    np.random.seed(cfg.random_seed)
-    torch.manual_seed(cfg.random_seed)
+    seed_everything(cfg.random_seed, cfg.deterministic)
     _limit_torch_threads()
     device = torch.device(cfg.device)
 
     model_fn = DEEP_MODEL_BUILDERS.get(cfg.model_type)
     if model_fn is None:
         raise ValueError(f"Unknown deep model type: {cfg.model_type}")
-    model = model_fn(n_channels=cfg.n_channels, dropout=cfg.dropout).to(device)
+    if cfg.model_type == "cnn_transformer":
+        model = model_fn(n_channels=cfg.n_channels, dropout=cfg.dropout,
+                         max_sequence_length=cfg.sequence_length).to(device)
+    elif cfg.model_type == "dlstm":
+        model = model_fn(n_channels=cfg.n_channels, dropout=cfg.dropout,
+                         hidden_size=cfg.dlstm_hidden_size,
+                         num_layers=cfg.dlstm_num_layers).to(device)
+    else:
+        model = model_fn(n_channels=cfg.n_channels, dropout=cfg.dropout).to(device)
 
     train_ds = TensorDataset(
         torch.tensor(X_train, dtype=torch.float32),
@@ -126,7 +165,10 @@ def train_deep_model(
         torch.tensor(y_fc_val, dtype=torch.float32),
     )
     loader_generator = torch.Generator().manual_seed(cfg.random_seed)
-    train_loader = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, generator=loader_generator)
+    train_loader = DataLoader(
+        train_ds, batch_size=cfg.batch_size, shuffle=cfg.shuffle_train_windows,
+        generator=loader_generator if cfg.shuffle_train_windows else None,
+    )
     val_loader = DataLoader(val_ds, batch_size=cfg.batch_size, shuffle=False)
 
     if cfg.class_weighting and len(y_now_train) > 0:
@@ -138,8 +180,18 @@ def train_deep_model(
 
     ce_loss_fn = nn.CrossEntropyLoss(weight=class_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=cfg.scheduler_factor,
+        patience=cfg.scheduler_patience, min_lr=cfg.minimum_learning_rate,
+    )
 
     history = []
+    best_loss = float("inf")
+    best_epoch = None
+    best_state = None
+    best_optimizer_state = None
+    best_scheduler_state = None
+    epochs_without_improvement = 0
     for epoch in range(cfg.epochs):
         if should_stop and should_stop():
             break
@@ -177,6 +229,10 @@ def train_deep_model(
                 all_fc_true.append(yb_fc.cpu().numpy())
 
         val_loss = val_loss_sum / max(1, len(val_ds))
+        if not np.isfinite(val_loss):
+            raise ValueError("Validation loss is undefined; cannot select or restore a best checkpoint.")
+        scheduler.step(val_loss)
+        current_lr = float(optimizer.param_groups[0]["lr"])
 
         from ml.evaluation.metrics import evaluate_binary_forecast
         tss_list, hss_list = [], []
@@ -199,10 +255,51 @@ def train_deep_model(
             "val_loss": float(val_loss),
             "val_tss_mean": float(np.mean(tss_list)) if tss_list else None,
             "val_hss_mean": float(np.mean(hss_list)) if hss_list else None,
+            "learning_rate": current_lr,
+            "selection_metric": "validation_loss_minimized",
             "duration_sec": round(time.time() - t0, 3),
         }
         history.append(record)
+        if val_loss < best_loss - cfg.minimum_improvement:
+            best_loss = float(val_loss)
+            best_epoch = epoch + 1
+            best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
+            best_optimizer_state = copy.deepcopy(optimizer.state_dict())
+            best_scheduler_state = copy.deepcopy(scheduler.state_dict())
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
         if progress_callback:
             progress_callback(record)
+        if cfg.early_stopping_patience and epochs_without_improvement >= cfg.early_stopping_patience:
+            break
+
+    if best_state is None:
+        raise ValueError("Training ended before a finite validation checkpoint was available.")
+    model.load_state_dict(best_state)
+    model._training_metadata = {
+        "best_epoch": best_epoch,
+        "best_validation_loss": best_loss,
+        "selection_metric": "validation_loss_minimized",
+        "early_stopping_patience": cfg.early_stopping_patience,
+        "minimum_improvement": cfg.minimum_improvement,
+        "stopped_early": len(history) < cfg.epochs,
+        "scheduler": "ReduceLROnPlateau",
+        "optimizer_state_dict": best_optimizer_state,
+        "scheduler_state_dict": best_scheduler_state,
+        "training_config": vars(cfg).copy(),
+        "class_distribution": {
+            "nowcast": np.bincount(np.asarray(y_now_train, dtype=int), minlength=4).tolist(),
+            "forecast_positive": positive_counts.astype(int).tolist(),
+            "forecast_known": np.isfinite(np.asarray(y_fc_train, dtype=float)).sum(axis=0).astype(int).tolist(),
+            "class_weighting": bool(cfg.class_weighting),
+        },
+        "validation_class_support": {
+            "forecast_positive": (np.sum((np.asarray(y_fc_val) == 1) & np.isfinite(y_fc_val), axis=0)).astype(int).tolist(),
+            "forecast_negative": (np.sum((np.asarray(y_fc_val) == 0) & np.isfinite(y_fc_val), axis=0)).astype(int).tolist(),
+        },
+        "deterministic": cfg.deterministic,
+        "random_seed": cfg.random_seed,
+    }
 
     return model, history

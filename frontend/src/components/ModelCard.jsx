@@ -66,7 +66,7 @@ export default function ModelCard({
               {model.name}
             </h3>
             <span className="text-[11px] font-mono text-slate-400">
-              ID: {model.model_id}
+              ID: {model.model_id} · {model.version || 'unversioned'}
             </span>
           </div>
 
@@ -89,6 +89,9 @@ export default function ModelCard({
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-300 border border-space-700">
             {model.status || 'untrained'}
+          </span>
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${model.model_ready ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/10 text-amber-300 border-amber-500/30'}`}>
+            {model.model_ready ? 'inference ready' : 'unavailable'}
           </span>
           {model.parameters_count && (
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-space-800 text-slate-400">
@@ -141,17 +144,21 @@ export default function ModelCard({
           >
             Train to Deploy
           </Link>
-        ) : !isActive && model.status !== 'untrained' ? (
+        ) : !isActive && model.status !== 'untrained' && model.model_ready ? (
           <button
             onClick={() => onSelect(model.model_id)}
             className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-space-800 hover:bg-solar-500 hover:text-space-950 text-slate-200 border border-space-700 transition-all"
           >
             Set Active Model
           </button>
-        ) : (
+        ) : isActive && model.model_ready ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400">
             <CheckCircle size={14} />
             Live Deployment
+          </span>
+        ) : (
+          <span className="max-w-48 text-right text-[10px] font-mono text-amber-300" title={model.availability_reason || 'Model has not been trained'}>
+            {model.availability_reason || 'Train and validate artifacts before activation'}
           </span>
         )}
       </div>

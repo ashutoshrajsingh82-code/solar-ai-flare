@@ -1,7 +1,7 @@
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Header, Query
 
 from app.schemas.schemas import TrainRequest, ModelSelectRequest
 from app.services import model_service
@@ -59,7 +59,8 @@ def list_models():
 def select_model(req: ModelSelectRequest):
     """Select the active model."""
     try:
-        return model_service.set_active_model(req.model_id)
+        record = model_service.set_active_model(req.model_id)
+        return {"model_id": record["model_id"], "version": record.get("version"), "active": True}
 
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -73,5 +74,26 @@ def model_metrics(model_id: str):
     try:
         return model_service.get_model_metrics(model_id)
 
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{model_id}/evaluation")
+def model_evaluation(model_id: str, horizon: Literal["1h", "3h", "6h", "12h", "24h"] = "1h",
+                     threshold: float | None = Query(default=None, ge=0, le=1)):
+    """Recompute holdout metrics from stored test truth/probability pairs."""
+    try:
+        return model_service.get_model_evaluation(model_id, horizon, threshold)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.get("/{model_id}/readiness")
+def model_readiness(model_id: str):
+    """Check whether a registered version can safely serve inference."""
+    try:
+        return model_service.get_model_readiness(model_id)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))

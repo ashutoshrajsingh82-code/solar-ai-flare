@@ -8,21 +8,18 @@ import numpy as np
 import joblib
 import torch
 import os
+from ml.inference.risk import RISK_BANDS, risk_band_for_score
 from typing import Dict, Any, Optional
 
 NOWCAST_LABELS = ["quiet", "pre_flare", "flare", "decay"]
 FORECAST_HORIZONS = ["1h", "3h", "6h", "12h", "24h"]
 
-RISK_THRESHOLDS = [
-    (0.85, "CRITICAL"),
-    (0.70, "HIGH"),
-    (0.50, "MODERATE"),
-    (0.30, "WATCH"),
-    (0.0, "LOW"),
-]
+RISK_THRESHOLDS = list(RISK_BANDS)
 
 
 def risk_level_from_probability(p: float, thresholds=None) -> str:
+    if thresholds is None:
+        return risk_band_for_score(p)
     thr = thresholds or RISK_THRESHOLDS
     for cutoff, label in thr:
         if p >= cutoff:

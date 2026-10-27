@@ -1,0 +1,108 @@
+{
+  "run_id": "phase4v_20261026T162621Z",
+  "phase": "Phase 4V",
+  "training_mode": "DEVELOPMENT_ONLY_NOT_FINAL_MODEL",
+  "production_registry_eligible": false,
+  "experimental_marker": "PHASE4V_DEVELOPMENT_ONLY_NOT_FINAL_MODEL",
+  "created_at_utc": "2026-10-26T16:36:33.723310+00:00",
+  "device": "cpu",
+  "random_seed": 42,
+  "model_architecture": "SelfSupervisedCNNLSTM",
+  "architecture_params": {
+    "in_features": 1,
+    "horizon": 10,
+    "cnn_channels": 32,
+    "lstm_hidden": 64,
+    "lstm_layers": 2,
+    "dropout": 0.2
+  },
+  "dataset_contract": "phase4u_dataset_contract.md (version phase4u_contract_v1.0)",
+  "sequence_length_seconds": 60,
+  "forecast_horizon_seconds": 10,
+  "scaler": {
+    "type": "log10_zscore",
+    "mean": 2.5978752099759608,
+    "std": 0.582402100097115,
+    "fitted_on": "training_partition_only"
+  },
+  "epoch1_may2024": {
+    "source_archive": "solexs_2026Oct25T200126271.zip",
+    "source_sha256": "8df85ed75b6f00052d7f45a6764b187c700977f931504fb79fdfe56f10df9db2",
+    "train_dates": [
+      "20240508",
+      "20240509",
+      "20240510",
+      "20240511",
+      "20240512"
+    ],
+    "val_dates": [
+      "20240513"
+    ],
+    "test_dates": [
+      "20240514",
+      "20240515"
+    ],
+    "train_windows": 431069,
+    "val_windows": 86185,
+    "test_windows": 172439
+  },
+  "epoch2_feb2026": {
+    "source_archive": "solexs_2026Oct23T184402685.zip",
+    "source_sha256": "34c39624194ee2da95bbf8e3dfed5ac002c55a517a31bc4091bfdd0d2b4671c2",
+    "train_dates": [
+      "20260131",
+      "20260201",
+      "20260202"
+    ],
+    "val_dates": [
+      "20260203",
+      "20260204"
+    ],
+    "test_dates": [
+      "20260205"
+    ],
+    "train_windows": 174334,
+    "val_windows": 48523,
+    "test_windows": 44221
+  },
+  "holdout_epoch3_status": "LOCKED_NOT_ACQUIRED \u2014 October 2024 not accessed",
+  "training": {
+    "epochs_requested": 5,
+    "learning_rate": 0.001,
+    "batch_size": 256,
+    "optimizer": "Adam",
+    "loss": "MSELoss (scaled)",
+    "best_val_loss_scaled_mse": 0.004794352387373208,
+    "training_duration_seconds": 596.32,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 0.020728444007417426,
+        "val_loss": 0.006051817136159415
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.00847820428082753,
+        "val_loss": 0.006938224956458507
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.007829724440093291,
+        "val_loss": 0.007002798730144831
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.007061298296128986,
+        "val_loss": 0.0050547453260265645
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.006951770630078348,
+        "val_loss": 0.004794352387373208
+      }
+    ]
+  },
+  "checkpoint_sha256": "e67662368c49f0d110b15e2378c04dceb8df8fbd9936d2b882a028d4fb0bd26d",
+  "gate_status": "PHASE4V_DEVELOPMENT_TRAINING_AUTHORIZED",
+  "evaluation_note": "Metrics reported separately per epoch and causal cohort. Causal cohort conditioning uses only x_t (forecast origin count rate), never future target peaks. October holdout excluded from all evaluation."
+}

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, Any
 
 REGISTRY_INDEX_FILENAME = "registry_index.json"
+SYNTHETIC_ONLY_MARKER = "SYNTHETIC_NOT_FOR_PRODUCTION"
 
 
 @dataclass
@@ -72,6 +73,11 @@ class ModelRegistry:
                 os.unlink(tmp)
 
     def register(self, record: ModelRecord):
+        if (record.training_dataset == SYNTHETIC_ONLY_MARKER or
+                record.params.get("dataset_status") == SYNTHETIC_ONLY_MARKER or
+                record.params.get("model_status") == SYNTHETIC_ONLY_MARKER or
+                record.params.get("production_registry_eligible") is False):
+            raise ValueError("Synthetic smoke models cannot be registered in the production model registry.")
         index = self._read_index()
         index[record.model_id] = asdict(record)
         self._write_index(index)
@@ -96,6 +102,12 @@ class ModelRegistry:
         rec = rec or self.get(model_id)
         if not rec:
             raise KeyError(f"Model {model_id} not found in registry.")
+        params = rec.get("params", {})
+        if (rec.get("training_dataset") == SYNTHETIC_ONLY_MARKER or
+                params.get("dataset_status") == SYNTHETIC_ONLY_MARKER or
+                params.get("model_status") == SYNTHETIC_ONLY_MARKER or
+                params.get("production_registry_eligible") is False):
+            raise ValueError("Synthetic smoke models cannot be activated in the production model registry.")
         if rec.get("status") == "untrained":
             raise ValueError(f"Model {model_id} is untrained and cannot be activated.")
         if rec.get("status") == "trained":
@@ -126,11 +138,18 @@ class ModelRegistry:
                 architecture = rec.get("architecture")
                 if artifact.get("model_type") != architecture or "state_dict" not in artifact:
                     raise ValueError("Deep checkpoint metadata does not match the registry.")
+                if architecture in {"cnn_transformer", "dlstm"} and artifact.get("architecture_version") != 2:
+                    raise ValueError(f"Legacy {architecture} checkpoint requires retraining for this architecture version.")
                 from ml.models.deep_models import DEEP_MODEL_BUILDERS
                 builder = DEEP_MODEL_BUILDERS.get(architecture)
                 if builder is None:
                     raise ValueError("Deep model architecture is unsupported.")
-                model = builder(n_channels=artifact.get("n_channels", rec.get("params", {}).get("n_channels", 2)))
+                model_config = artifact.get("model_config", {})
+                builder_kwargs = {key: model_config[key]
+                                  for key in ("hidden_size", "num_layers", "max_sequence_length")
+                                  if model_config.get(key) is not None}
+                model = builder(n_channels=artifact.get("n_channels", rec.get("params", {}).get("n_channels", 2)),
+                                **builder_kwargs)
                 model.load_state_dict(artifact["state_dict"])
             if rec.get("transformer_required", True):
                 import joblib
@@ -138,6 +157,8 @@ class ModelRegistry:
                 if not getattr(transformer, "fitted", False) or not callable(getattr(transformer, "transform", None)):
                     raise ValueError("Preprocessing transformer is not fitted or compatible.")
         except Exception as exc:
+            if isinstance(exc, ValueError) and "requires retraining" in str(exc):
+                raise
             raise ValueError(f"Model {model_id} artifacts are unreadable or incompatible.") from exc
 
     def get_active(self) -> Optional[dict]:

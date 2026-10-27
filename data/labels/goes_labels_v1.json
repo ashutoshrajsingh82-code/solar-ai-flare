@@ -1,0 +1,64 @@
+{
+  "label_file": "goes_labels_v1.parquet",
+  "format": "parquet",
+  "created_at_utc": "2026-10-26T17:41:38.575474+00:00",
+  "git_commit": "f169fe6191bb84dcef9c86a56408c9d65749cbea",
+  "row_count": 8640,
+  "date_range": {
+    "start": "2026-01-31 00:00:00+00:00",
+    "end": "2026-02-05 23:59:00+00:00"
+  },
+  "state_counts": {
+    "QUIET": 3881,
+    "PRE_FLARE": 2568,
+    "FLARE": 1266,
+    "DECAY": 925
+  },
+  "forecast_valid_counts": {
+    "valid": 6401,
+    "masked": 2239
+  },
+  "horizon_positive_rates": {
+    "y_1h": {
+      "positive_count": 2514,
+      "nan_count": 2573,
+      "positive_rate_valid_only": 0.4143728366573265
+    },
+    "y_3h": {
+      "positive_count": 3885,
+      "nan_count": 2942,
+      "positive_rate_valid_only": 0.6818181818181818
+    },
+    "y_6h": {
+      "positive_count": 3977,
+      "nan_count": 3455,
+      "positive_rate_valid_only": 0.7670202507232401
+    },
+    "y_12h": {
+      "positive_count": 3557,
+      "nan_count": 4424,
+      "positive_rate_valid_only": 0.8436907020872866
+    },
+    "y_24h": {
+      "positive_count": 2576,
+      "nan_count": 5966,
+      "positive_rate_valid_only": 0.9633507853403142
+    }
+  },
+  "custom_metadata": {
+    "source_events_file": "C:\\Users\\ASHUTOSH\\Downloads\\data\\goes\\goes_flares.csv",
+    "source_flux_file": "C:\\Users\\ASHUTOSH\\Downloads\\data\\goes\\goes_xrs_1min.csv",
+    "cli_args": {
+      "events": "C:/Users/ASHUTOSH/Downloads/data/goes/goes_flares.csv",
+      "flux": "C:/Users/ASHUTOSH/Downloads/data/goes/goes_xrs_1min.csv",
+      "start": "2026-01-31",
+      "end": "2026-02-05",
+      "cadence": "1min",
+      "pre_flare_min": 30,
+      "min_class": "M",
+      "out": "data/labels/goes_labels_v1.parquet",
+      "report": "backend/reports/goes_labels_report.md",
+      "splits": 3
+    }
+  }
+}

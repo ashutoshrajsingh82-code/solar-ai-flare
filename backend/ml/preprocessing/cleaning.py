@@ -1,22 +1,4 @@
-
-"""
-Cleaning stage of the data pipeline.
-
-Purpose:
-Clean raw SoLEXS and HEL1OS data before using it for ML.
-
-This stage handles:
-1. Invalid timestamps
-2. Duplicate timestamps
-3. Unsorted timestamps
-4. Negative flux values
-5. Unusual spikes in flux readings
-6. Missing values (NaNs)
-7. Small and large telemetry gaps
-
-All cleaning strategies can be configured through CleaningConfig.
-"""
-
+"""Causal data validation and quality reporting; no interpolation or zero fill."""
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
@@ -24,204 +6,93 @@ import pandas as pd
 
 @dataclass
 class CleaningConfig:
-    # Remove rows that have the same timestamp.
-    drop_duplicate_timestamps: bool = True
-
-    # Sort the data chronologically by timestamp.
+    drop_duplicate_timestamps: bool = True  # explicit policy: stable keep-first
     enforce_monotonic: bool = True
-
-    # How to handle negative flux values:
-    # "clip" replaces them with a small positive value.
-    # "nan" replaces them with NaN (missing value).
-    negative_flux_strategy: str = "clip"
-
-    # Sensitivity of the spike detector.
-    # A higher threshold detects fewer spikes.
+    negative_flux_strategy: str = "nan"  # negative flux is invalid, retained as missing
     spike_zscore_threshold: float = 6.0
-
-    # "interpolate" replaces detected spikes with estimated values.
-    # "flag_only" detects spikes but does not change them.
-    spike_strategy: str = "interpolate"
-
-    # Fill only gaps containing at most 5 consecutive missing readings.
-    # Larger gaps are left as NaN to avoid inventing too much data.
-    max_gap_interpolate_steps: int = 5
-
-    # Minimum positive flux value used when clipping negative values.
-    min_valid_flux: float = 1e-12
+    spike_strategy: str = "flag_only"  # observations are retained; flags are features
+    spike_lookback_minutes: int = 10
+    spike_min_samples: int = 5
+    max_gap_interpolate_steps: int = 5  # legacy config field; interpolation is disabled
+    min_valid_flux: float = 1e-12  # legacy config field; no epsilon/clipping is applied
 
 
-def clean_dataframe(
-    df: pd.DataFrame,
-    config: CleaningConfig = None
-) -> tuple[pd.DataFrame, dict]:
-
-    # Use default cleaning settings if no configuration is provided.
+def clean_dataframe(df: pd.DataFrame, config: CleaningConfig = None) -> tuple[pd.DataFrame, dict]:
     cfg = config or CleaningConfig()
+    if cfg.negative_flux_strategy != "nan":
+        raise ValueError("Negative flux clipping is disabled; invalid negative measurements are marked missing.")
+    if cfg.spike_strategy != "flag_only":
+        raise ValueError("Spike interpolation/correction is disabled; use causal flag_only detection.")
+    if cfg.spike_lookback_minutes <= 0 or cfg.spike_min_samples < 2 or cfg.spike_zscore_threshold <= 0:
+        raise ValueError("Spike lookback, minimum sample count, and threshold must be positive.")
+    absent = [c for c in ("timestamp", "solexs_flux", "helios_flux") if c not in df]
+    if absent:
+        raise ValueError(f"Cleaning requires columns: {absent}")
 
-    # Keep a report of the changes made during cleaning.
-    # This helps us understand data quality and display statistics
-    # on the pipeline dashboard.
+    out = df.copy()
+    raw_ts = pd.to_datetime(out.timestamp, utc=True, errors="coerce", format="mixed")
     report = {
-        "input_rows": len(df),
-        "duplicates_removed": 0,
-        "non_monotonic_rows_removed": 0,
-        "negative_values_fixed": 0,
-        "spikes_detected": 0,
-        "spikes_corrected": 0,
-        "nan_count_before": int(
-            df[["solexs_flux", "helios_flux"]].isna().sum().sum()
-        ),
-        "large_gaps_left_as_nan": 0,
+        "input_rows": len(out), "output_rows": 0,
+        "invalid_timestamps_removed": int(raw_ts.isna().sum()),
+        "duplicates_removed": 0, "out_of_order_adjacent_pairs": int(raw_ts.dropna().diff().lt(pd.Timedelta(0)).sum()),
+        "negative_values_marked_missing": 0, "spikes_detected": 0, "spikes_corrected": 0,
+        "nan_count_before": int(out[["solexs_flux", "helios_flux"]].isna().sum().sum()),
+        "nan_count_after_flagging": 0, "nan_count_final": 0,
+        "large_gaps_left_as_nan": 0, "interpolation": "none",
+        "duplicate_policy": "stable keep-first" if cfg.drop_duplicate_timestamps else "reject",
+        "spike_policy": "prior-only elapsed-time median/MAD flags; measurements are retained",
+        "spike_lookback_minutes": cfg.spike_lookback_minutes,
+        "spike_min_samples": cfg.spike_min_samples,
+        "spike_threshold": cfg.spike_zscore_threshold,
         "warnings": [],
     }
-
-    # Work on a copy so that the original dataframe is not modified.
-    df = df.copy()
-
-    # Convert timestamps into a consistent UTC datetime format.
-    # Invalid timestamps become NaN (NaT) and are removed below.
-    df["timestamp"] = pd.to_datetime(
-        df["timestamp"], utc=True, errors="coerce"
-    )
-
-    # Remove rows whose timestamps could not be interpreted.
-    bad_ts = df["timestamp"].isna().sum()
-    if bad_ts:
-        report["warnings"].append(
-            f"{bad_ts} rows had invalid/unparseable timestamps and were dropped."
-        )
-
-    df = df.dropna(subset=["timestamp"])
-
-    # Remove duplicate timestamps, keeping the first occurrence.
-    # This avoids multiple observations with the same timestamp.
+    out["timestamp"] = raw_ts
+    out = out.dropna(subset=["timestamp"])
     if cfg.drop_duplicate_timestamps:
-        before = len(df)
-
-        df = (
-            df.sort_values("timestamp")
-              .drop_duplicates(subset=["timestamp"], keep="first")
-        )
-
-        report["duplicates_removed"] = before - len(df)
-
-    # Sort observations from earliest to latest.
-    # Sorting makes timestamps chronological; rows are not removed here.
+        report["duplicates_removed"] = int(out.timestamp.duplicated().sum())
+        out = out.sort_values("timestamp", kind="stable").drop_duplicates("timestamp", keep="first")
+    elif out.timestamp.duplicated().any():
+        raise ValueError("Duplicate timestamps are not allowed by the selected cleaning policy.")
     if cfg.enforce_monotonic:
-        df = df.sort_values("timestamp").reset_index(drop=True)
+        out = out.sort_values("timestamp", kind="stable")
+    elif not out.timestamp.is_monotonic_increasing:
+        raise ValueError("Input observations are out of order and enforce_monotonic is disabled.")
+    out = out.reset_index(drop=True)
 
-        # Sorting resolves the ordering issue, so no rows are removed.
-        report["non_monotonic_rows_removed"] = 0
+    times = pd.DatetimeIndex(out.timestamp)
+    for column in ("solexs_flux", "helios_flux"):
+        numeric = pd.to_numeric(out[column], errors="coerce").astype(float)
+        malformed = out[column].notna() & numeric.isna()
+        if malformed.any():
+            report["warnings"].append(f"{int(malformed.sum())} non-numeric values in {column} were marked missing.")
+        negative = numeric < 0
+        report["negative_values_marked_missing"] += int(negative.sum())
+        numeric.loc[negative] = np.nan
+        # Causal robust spike count is diagnostic only; no peak is replaced,
+        # since real flare peaks can be scientifically important.
+        values = numeric.to_numpy(dtype=float)
+        spike_count = 0
+        span = pd.Timedelta(minutes=cfg.spike_lookback_minutes).value
+        time_values = times.asi8
+        for i, stamp in enumerate(time_values):
+            start = np.searchsorted(time_values, stamp - span, side="left")
+            history = values[start:i]
+            history = history[np.isfinite(history)]
+            if len(history) < cfg.spike_min_samples or not np.isfinite(values[i]):
+                continue
+            median = float(np.median(history))
+            mad = float(np.median(np.abs(history - median)))
+            if mad > 0 and abs(values[i] - median) / (1.4826 * mad) >= cfg.spike_zscore_threshold:
+                spike_count += 1
+        report["spikes_detected"] += spike_count
+        out[column] = numeric
 
-    # Clean each instrument's flux column separately.
-    for col in ["solexs_flux", "helios_flux"]:
-
-        # Warn if an expected flux column is missing.
-        if col not in df.columns:
-            report["warnings"].append(
-                f"Missing expected column '{col}'."
-            )
-            continue
-
-        # Flux values should not be negative under this pipeline's
-        # assumed data convention.
-        neg_mask = df[col] < 0
-        n_neg = int(neg_mask.sum())
-
-        if n_neg:
-            if cfg.negative_flux_strategy == "clip":
-                # Replace negative values with a small positive number.
-                df.loc[neg_mask, col] = cfg.min_valid_flux
-            else:
-                # Mark negative values as missing so they can be handled later.
-                df.loc[neg_mask, col] = np.nan
-
-            report["negative_values_fixed"] += n_neg
-
-        # Detect unusual spikes using a rolling window of 21 readings.
-        # The rolling median estimates the typical local flux level.
-        # The rolling standard deviation measures local variation.
-        # A large z-score means a reading is far from the local median.
-        roll_mean = df[col].rolling(
-            21, center=True, min_periods=5
-        ).median()
-
-        roll_std = (
-            df[col].rolling(21, center=True, min_periods=5)
-            .std()
-            .replace(0, np.nan)
-        )
-
-        z = (df[col] - roll_mean) / roll_std
-
-        # Flag readings whose absolute z-score exceeds the threshold.
-        spike_mask = z.abs() > cfg.spike_zscore_threshold
-        n_spikes = int(spike_mask.fillna(False).sum())
-
-        report["spikes_detected"] += n_spikes
-
-        if n_spikes and cfg.spike_strategy == "interpolate":
-            # Mark detected spikes as missing.
-            # They will be interpolated later if they belong to a small gap.
-            # WARNING: genuine solar flare peaks could also be flagged.
-            df.loc[spike_mask.fillna(False), col] = np.nan
-            report["spikes_corrected"] += n_spikes
-
-    # Count missing flux values after negative-value and spike handling.
-    report["nan_count_after_flagging"] = int(
-        df[["solexs_flux", "helios_flux"]].isna().sum().sum()
-    )
-
-    # Handle missing readings and telemetry gaps.
-    for col in ["solexs_flux", "helios_flux"]:
-
-        if col not in df.columns:
-            continue
-
-        # Identify which rows contain missing flux values.
-        isna = df[col].isna()
-
-        # Give each consecutive run of missing/non-missing values
-        # a group ID, allowing us to calculate the length of each gap.
-        run_id = (isna != isna.shift()).cumsum()
-        run_lengths = isna.groupby(run_id).transform("sum")
-
-        # A small gap contains at most the configured number of
-        # consecutive missing readings.
-        small_gap_mask = isna & (
-            run_lengths <= cfg.max_gap_interpolate_steps
-        )
-
-        # Larger gaps are preserved because estimating long stretches
-        # could fabricate unrealistic instrument measurements.
-        large_gap_mask = isna & (
-            run_lengths > cfg.max_gap_interpolate_steps
-        )
-
-        report["large_gaps_left_as_nan"] += int(
-            large_gap_mask.sum()
-        )
-
-        # Keep missing values as placeholders before interpolation.
-        df[col] = df[col].where(~small_gap_mask, np.nan)
-
-        # Estimate small internal gaps using linear interpolation.
-        # This fills missing values between known readings.
-        # Gaps at the beginning/end and large gaps remain missing.
-        df.loc[small_gap_mask, col] = (
-            df[col]
-            .interpolate(method="linear", limit_area="inside")[
-                small_gap_mask
-            ]
-        )
-
-    # Record final statistics for the cleaning report.
-    report["output_rows"] = len(df)
-
-    report["nan_count_final"] = int(
-        df[["solexs_flux", "helios_flux"]].isna().sum().sum()
-    )
-
-    # Reset the row index and return both the cleaned data and report.
-    return df.reset_index(drop=True), report
+    report["nan_count_after_flagging"] = int(out[["solexs_flux", "helios_flux"]].isna().sum().sum())
+    report["nan_count_final"] = report["nan_count_after_flagging"]
+    deltas = out.timestamp.diff().dt.total_seconds()
+    report["observation_gaps_over_3x_median_cadence"] = int(
+        (deltas > deltas.dropna().median() * 3).sum()
+    ) if deltas.notna().any() else 0
+    report["large_gaps_left_as_nan"] = report["observation_gaps_over_3x_median_cadence"]
+    report["output_rows"] = len(out)
+    return out, report

@@ -1,5 +1,5 @@
 import datetime as dt
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, UniqueConstraint, Index, text
 from app.database.db import Base
 
 
@@ -18,6 +18,10 @@ class Dataset(Base):
     source_metadata = Column(JSON, default=dict)
     uploaded_at = Column(DateTime, default=dt.datetime.utcnow)
     filepath = Column(String)
+    content_sha256 = Column(String(64), nullable=True, index=True)
+    file_format = Column(String(16), nullable=True)
+    processing_status = Column(String(24), nullable=False, default="complete", server_default="complete")
+    schema_metadata = Column(JSON, nullable=True)
 
 
 class ExperimentRecord(Base):
@@ -44,16 +48,52 @@ class ModelMetricRecord(Base):
 
 class AlertRecord(Base):
     __tablename__ = "alerts"
+    __table_args__ = (
+        Index("uq_alert_active_deduplication_key", "deduplication_key", unique=True,
+              sqlite_where=text("state = 'ACTIVE'"), postgresql_where=text("state = 'ACTIVE'")),
+    )
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=dt.datetime.utcnow)
     severity = Column(String)          # LOW | WATCH | MODERATE | HIGH | CRITICAL
     nowcast_state = Column(String)
     forecast_horizon = Column(String)
-    probability = Column(Float)
+    probability = Column(Float)  # Legacy column stores an uncalibrated classifier score.
     message = Column(Text)
     model = Column(String)
     acknowledged = Column(Boolean, default=False)
     is_demo = Column(Boolean, default=True)
+    deduplication_key = Column(String(256), nullable=True, index=True)
+    state = Column(String(24), nullable=False, default="ACTIVE", server_default="ACTIVE", index=True)
+    source_classification = Column(String(32), nullable=False, default="api_prediction", server_default="api_prediction")
+    model_version = Column(String(64), nullable=True)
+    prediction_id = Column(String(64), nullable=True)
+    latest_observation_timestamp = Column(DateTime, nullable=True)
+    latest_forecast_issue_timestamp = Column(DateTime, nullable=True)
+    last_updated_at = Column(DateTime, nullable=True)
+    trigger_threshold = Column(Float, nullable=True)
+    clear_threshold = Column(Float, nullable=True)
+    last_notification_at = Column(DateTime, nullable=True)
+    notification_count = Column(Integer, nullable=False, default=0, server_default="0")
+    notification_status = Column(String(32), nullable=False, default="not_configured", server_default="not_configured")
+    resolved_at = Column(DateTime, nullable=True)
+    resolution_reason = Column(String(128), nullable=True)
+    configuration_version = Column(String(64), nullable=True)
+
+
+class AlertEventRecord(Base):
+    """Idempotency ledger and append-only state-transition audit for alert scoring."""
+    __tablename__ = "alert_events"
+    __table_args__ = (UniqueConstraint("deduplication_key", "prediction_id", "forecast_horizon",
+                                       name="uq_alert_event_prediction_horizon"),)
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(Integer, nullable=True, index=True)
+    deduplication_key = Column(String(256), nullable=False, index=True)
+    prediction_id = Column(String(64), nullable=False)
+    forecast_horizon = Column(String(8), nullable=False)
+    transition = Column(String(24), nullable=False)
+    score = Column(Float, nullable=True)
+    risk_band = Column(String(16), nullable=True)
+    created_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
 
 
 class InferenceRecord(Base):
@@ -66,6 +106,36 @@ class InferenceRecord(Base):
     forecast = Column(JSON)
     risk = Column(String)
     input_snapshot = Column(JSON)
+    source_classification = Column(String(32), nullable=False, default="api_prediction", server_default="api_prediction")
+    replay_id = Column(String(64), nullable=True, index=True)
+    observation_timestamp = Column(DateTime, nullable=True)
+    forecast_issue_timestamp = Column(DateTime, nullable=True)
+    input_window_start = Column(DateTime, nullable=True)
+    input_window_end = Column(DateTime, nullable=True)
+    data_quality = Column(JSON, nullable=True)
+    processing_status = Column(String(24), nullable=False, default="complete", server_default="complete")
+    outcomes = Column(JSON, nullable=True)
+
+
+class SimulationReplayRecord(Base):
+    __tablename__ = "simulation_replays"
+    id = Column(String(64), primary_key=True)
+    dataset_id = Column(String(128), nullable=False)
+    model_id = Column(String(128), nullable=False)
+    model_version = Column(String(64), nullable=False)
+    source_classification = Column(String(32), nullable=False, default="historical_test_replay")
+    status = Column(String(24), nullable=False, index=True)
+    period_start_utc = Column(DateTime(timezone=True), nullable=False)
+    period_end_utc = Column(DateTime(timezone=True), nullable=False)
+    configuration = Column(JSON, nullable=False, default=dict)
+    preprocessing_fingerprint = Column(String(64), nullable=True)
+    last_observation_timestamp = Column(DateTime, nullable=True)
+    last_prediction_id = Column(String(64), nullable=True)
+    resume_policy = Column(String(48), nullable=False, default="restart_from_beginning_idempotent",
+                           server_default="restart_from_beginning_idempotent")
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
+    finished_at = Column(DateTime, nullable=True)
 
 
 class BackgroundJobRecord(Base):

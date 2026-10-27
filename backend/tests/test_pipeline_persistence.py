@@ -1,4 +1,8 @@
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pandas as pd
 
@@ -35,6 +39,28 @@ def test_pipeline_frames_metadata_transformer_and_splits_restore(tmp_path):
     assert restored.snapshot_fingerprint() == state.snapshot_fingerprint()
     assert restored.is_ready_for_training()
     assert restored.transformer.transform(raw)["solexs_flux_scaled"].tolist() == state.transformer.transform(raw)["solexs_flux_scaled"].tolist()
+
+
+def test_pipeline_state_restores_in_a_new_python_process(tmp_path):
+    state = PipelineState(tmp_path / "cross-process", restore=False)
+    frame = pd.DataFrame({"timestamp": pd.date_range("2026-01-01", periods=3, freq="min", tz="UTC"),
+                          "solexs_flux": [1.0, 2.0, 3.0], "helios_flux": [4.0, 5.0, 6.0]})
+    state.dataset_meta = {"filename": "restart-fixture.csv", "source": "test", "dataset_id": "fixture-1"}
+    state.set_stage("raw", frame, {"input_rows": 3, "output_rows": 3, "warnings": []}, 0.01)
+    script = (
+        "import json, sys; "
+        "from app.services.pipeline_state import PipelineState; "
+        "state=PipelineState(sys.argv[1]); "
+        "print(json.dumps({'dataset': state.dataset_meta['dataset_id'], 'rows': len(state.raw_df), "
+        "'last_flux': state.raw_df.solexs_flux.iloc[-1]}))"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(tmp_path / "cross-process")],
+        cwd=Path(__file__).resolve().parents[1], env=os.environ.copy(),
+        check=True, capture_output=True, text=True, timeout=60,
+    )
+    restored = json.loads(completed.stdout.strip().splitlines()[-1])
+    assert restored == {"dataset": "fixture-1", "rows": 3, "last_flux": 3.0}
 
 
 def test_missing_corrupt_and_path_traversal_artifacts_are_reported(tmp_path):

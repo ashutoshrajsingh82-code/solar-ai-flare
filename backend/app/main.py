@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.core.config import settings
-from app.database.db import init_db, SessionLocal
+from app.database.db import engine, init_db, SessionLocal
 from app.api import health, data, preprocess, models, predict, alerts, simulation, experiments, dashboard, system, jobs
 
 logging.basicConfig(level=logging.INFO)
@@ -25,9 +25,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-Request-ID"],
 )
 
 for router in [health.router, data.router, preprocess.router, models.router, predict.router,
@@ -37,10 +37,22 @@ for router in [health.router, data.router, preprocess.router, models.router, pre
 
 @app.on_event("startup")
 def on_startup():
-    init_db()
-    logger.info("Database initialized")
+    try:
+        settings.validate_runtime()
+        if settings.should_auto_migrate:
+            init_db()
+            logger.info("database_migrations_completed")
+        else:
+            logger.info("database_migrations_skipped; run python -m app.migrate before startup")
+        from app.services.simulation_service import recover_interrupted_replays
+        recovered = recover_interrupted_replays()
+        if recovered:
+            logger.warning("Marked %d in-process replays interrupted for idempotent restart", recovered)
+    except Exception:
+        logger.exception("application_startup_configuration_or_database_failed")
+        raise
     # DEMO MODE bootstrap: auto-load synthetic data + seed alerts so the app is usable immediately.
-    if settings.data_mode == "demo":
+    if settings.data_mode == "demo" and settings.app_env.lower() not in {"production", "prod"}:
         try:
             db = SessionLocal()
             from app.services import data_service
@@ -51,6 +63,15 @@ def on_startup():
             logger.info("Demo dataset loaded.")
         except Exception as e:
             logger.warning(f"Demo bootstrap failed (app will still run, load data manually): {e}")
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    try:
+        from ml.inference.simulator import live_simulator
+        live_simulator.stop()
+    finally:
+        engine.dispose()
 
 
 @app.get("/")

@@ -1,0 +1,7 @@
+date,product_member,split_role,total_records,finite_records,nan_records,duty_cycle_pct,num_segments,num_windows,cadence_s,energy_band_kev,unit,mean_rate,std_rate,min_rate,max_rate,median_rate,eligibility_status,exclusion_reason
+20260131,AL1_SLX_L1_20260131_v1.0/SDD2/AL1_SOLEXS_20260131_SDD2_L1.lc.gz,train,86400,86391,9,99.99,3,86179,1.0,2-22,counts/s,77.82,59.57,1.0,451.0,62.0,PARTITION_TRAIN,Used in Phase 4M-S train partition; not untouched test
+20260201,AL1_SLX_L1_20260201_v1.0/SDD2/AL1_SOLEXS_20260201_SDD2_L1.lc.gz,train,86400,45132,41268,52.24,4,44087,1.0,2-22,counts/s,561.29,2173.42,0.0,27465.0,186.0,PARTITION_TRAIN,Used in Phase 4M-S train partition; not untouched test
+20260202,AL1_SLX_L1_20260202_v1.0/SDD2/AL1_SOLEXS_20260202_SDD2_L1.lc.gz,train,86400,44965,41435,52.04,3,44068,1.0,2-22,counts/s,2476.21,3522.27,0.0,23632.0,1063.0,PARTITION_TRAIN,Used in Phase 4M-S train partition; not untouched test
+20260203,AL1_SLX_L1_20260203_v1.0/SDD2/AL1_SOLEXS_20260203_SDD2_L1.lc.gz,val,86400,5109,81291,5.91,1,4308,1.0,2-22,counts/s,1049.49,752.81,0.0,2579.0,931.0,PARTITION_VAL,Used in Phase 4M-S val partition; not untouched test
+20260204,AL1_SLX_L1_20260204_v1.0/SDD2/AL1_SOLEXS_20260204_SDD2_L1.lc.gz,val,86400,45317,41083,52.45,3,44215,1.0,2-22,counts/s,361.46,593.74,0.0,4019.0,148.0,PARTITION_VAL,Used in Phase 4M-S val partition; not untouched test
+20260205,AL1_SLX_L1_20260205_v1.0/SDD2/AL1_SOLEXS_20260205_SDD2_L1.lc.gz,held_out_test,86400,45309,41091,52.44,3,44221,1.0,2-22,counts/s,275.1,410.0,0.0,2030.0,90.0,ELIGIBLE_FOR_AUTOREGRESSION,None

@@ -1,0 +1,113 @@
+{
+  "audit_timestamp_utc": "2026-10-26T15:56:57Z",
+  "source_archive": {
+    "path": "C:\\Users\\ASHUTOSH\\Downloads\\solexs_2026Oct25T200126271.zip",
+    "exists": true,
+    "size_bytes": 92592109,
+    "sha256": "8df85ed75b6f00052d7f45a6764b187c700977f931504fb79fdfe56f10df9db2",
+    "sha256_match": true
+  },
+  "phase4s_checkpoint": {
+    "canonical_path": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\solexs_phase4s_cnn_lstm_may2024_20261025T203124Z.pt",
+    "exists": true,
+    "sha256": "2680d264e7357162c4950bd5dc554349ce25c8e33ddd524737e505c2aba6632c",
+    "size_bytes": 252139
+  },
+  "phase4s_metadata": {
+    "canonical_path": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\solexs_phase4s_cnn_lstm_may2024_20261025T203124Z_metadata.json",
+    "exists": true,
+    "sha256": "769d6a3415e8169571ac43b976563131e23c390880c3134acb9a730dd82adccd"
+  },
+  "historical_reference_models": {
+    "phase4m_s_checkpoint": {
+      "path": "artifacts/real_data_experiments/solexs_self_supervised_cnnlstm_20261025T115207Z.pt",
+      "sha256": "815ded9a605fa4bb410791b3a64d07624d6f3d03ffaf02953b67c7f1f8e53d45",
+      "expected_sha256": "815ded9a605fa4bb410791b3a64d07624d6f3d03ffaf02953b67c7f1f8e53d45"
+    },
+    "phase4o_checkpoint": {
+      "path": "artifacts/real_data_experiments/phase4o/solexs_phase4o_cnn_lstm_direct_20261025T184851Z.pt",
+      "sha256": "d6076ab20c99fdc852d338c47f9b7248250a333c4708916a8ced8de3a6336514",
+      "expected_sha256": "d6076ab20c99fdc852d338c47f9b7248250a333c4708916a8ced8de3a6336514"
+    }
+  },
+  "saved_predictions": {
+    "exists_in_artifacts_phase4s": false,
+    "exists_in_reports": false,
+    "status": "NOT_SAVED_DURING_PHASE4S",
+    "audit_action": "PERFORM_READ_ONLY_AUDIT_INFERENCE_FROM_FROZEN_CHECKPOINT"
+  },
+  "reports_vs_artifacts_comparison": [
+    {
+      "filename": "phase4s_dataset_manifest.json",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_dataset_manifest.json",
+      "reports_sha256": "b027efeaca8aa1d2b71fdb3f292c53c417f06d7dda3419f34798008f7cd09b66",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_dataset_manifest.json",
+      "artifacts_sha256": "b027efeaca8aa1d2b71fdb3f292c53c417f06d7dda3419f34798008f7cd09b66",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_dataset_manifest.csv",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_dataset_manifest.csv",
+      "reports_sha256": "991a666b4858b14f8e61eb4e197a6c54ec7843131f1bab47300186f3d2d564c7",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_dataset_manifest.csv",
+      "artifacts_sha256": "991a666b4858b14f8e61eb4e197a6c54ec7843131f1bab47300186f3d2d564c7",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_data_integrity_audit.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_data_integrity_audit.md",
+      "reports_sha256": "6e1043f28197588d215391db484cc733bf7dfbf69f2238d6ef21c710abbc70c2",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_data_integrity_audit.md",
+      "artifacts_sha256": "6e1043f28197588d215391db484cc733bf7dfbf69f2238d6ef21c710abbc70c2",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_scientific_eligibility.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_scientific_eligibility.md",
+      "reports_sha256": "9bde0ecbaa645c5e01f03d87702a1409b6ebd1dad561b493d733a3f6066d44c4",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_scientific_eligibility.md",
+      "artifacts_sha256": "9bde0ecbaa645c5e01f03d87702a1409b6ebd1dad561b493d733a3f6066d44c4",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_training_readiness.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_training_readiness.md",
+      "reports_sha256": "3fb854c786063f8cf09dfadf46abf6408abe4e4d3e76bc1b482235865d9a3aea",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_training_readiness.md",
+      "artifacts_sha256": "3fb854c786063f8cf09dfadf46abf6408abe4e4d3e76bc1b482235865d9a3aea",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_evaluation_protocol.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_evaluation_protocol.md",
+      "reports_sha256": "cb182bf48807ceca86e37701b1cb8a2c5a3e898c964ea10e01bdd7f41bd47bc9",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_evaluation_protocol.md",
+      "artifacts_sha256": "cb182bf48807ceca86e37701b1cb8a2c5a3e898c964ea10e01bdd7f41bd47bc9",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_experiment_results.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_experiment_results.md",
+      "reports_sha256": "36c75c2832eee0d56168190e1a64cd37de18f8bc759bfc3d7023d05b89e85b65",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_experiment_results.md",
+      "artifacts_sha256": "36c75c2832eee0d56168190e1a64cd37de18f8bc759bfc3d7023d05b89e85b65",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_metrics.csv",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_metrics.csv",
+      "reports_sha256": "7d46e591c62e1275007fcb18e996d70bfb60f06ec77c421624a4bec8bc9348a2",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_metrics.csv",
+      "artifacts_sha256": "7d46e591c62e1275007fcb18e996d70bfb60f06ec77c421624a4bec8bc9348a2",
+      "identical": true
+    },
+    {
+      "filename": "phase4s_findings_and_next_steps.md",
+      "reports_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\reports\\phase4s_findings_and_next_steps.md",
+      "reports_sha256": "3f4241b8b3020e83b5f5b031c9fb57299ba7b6b6d2c20793594874c10c8965b2",
+      "artifacts_location": "C:\\Users\\ASHUTOSH\\Downloads\\solar-ai-flare-main\\solar-ai-flare-main\\backend\\artifacts\\real_data_experiments\\phase4s\\phase4s_findings_and_next_steps.md",
+      "artifacts_sha256": "3f4241b8b3020e83b5f5b031c9fb57299ba7b6b6d2c20793594874c10c8965b2",
+      "identical": true
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "generator": "phase4h_data_readiness_v1",
+  "audit_time_utc": "2026-10-24T21:05:30.590030+00:00",
+  "canonical_input": {
+    "summary": "reports\\phase4h_phase3c_canonical\\phase3c_audit_summary.json",
+    "summary_sha256": "4f45bb2c2623cfcbac48e82928a8ab54c25b29a9fd15fc5390f9c6c2d343e6c3",
+    "document_register": "reports\\phase4h_phase3c_canonical\\phase3c_document_register.json",
+    "document_register_sha256": "e1d5537fae378e04ae536711f0abf4cff23783e84e412681f2a08dcd99155948"
+  },
+  "canonical_readiness_status": "BLOCKED_SCIENTIFIC_SEMANTICS_UNRESOLVED",
+  "rule_counts": {
+    "verified": 7,
+    "partially_resolved": 6,
+    "unresolved_or_conflicting": 1
+  },
+  "document_hash_validation": [
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\hel1os\\HEL1OS_UserManual.pdf",
+      "expected_sha256": "8efdf3aaf48d8a72cd9d85b567a8c0a6e2655ecf52c5a8d87f36915b741acb4d",
+      "actual_sha256": "8efdf3aaf48d8a72cd9d85b567a8c0a6e2655ecf52c5a8d87f36915b741acb4d",
+      "matches": true,
+      "size_bytes": 1540669
+    },
+    {
+      "path": "E:\\SolarFlareData\\source_docs\\isro\\solexs\\SoLEXS-UserManual.pdf",
+      "expected_sha256": "d97c83618c85a0984e7dd0300ce5c16c4748ed5facde525949f902fe9f72abda",
+      "actual_sha256": "d97c83618c85a0984e7dd0300ce5c16c4748ed5facde525949f902fe9f72abda",
+      "matches": true,
+      "size_bytes": 363311
+    }
+  ],
+  "document_hash_mismatches": [],
+  "official_access_routes": [
+    {
+      "title": "PRADAN Aditya-L1 FAQ",
+      "issuer": "ISSDC/ISTRAC",
+      "url": "https://pradan1.issdc.gov.in/al1/faq.xhtml",
+      "access_outcome": "PUBLICLY_ACCESSIBLE_REVIEWED",
+      "supports": "Access route only",
+      "limitations": "HEL1OS FAQ directs technical specifications to protected OtherDownloads; no field-level contract."
+    },
+    {
+      "title": "Aditya-L1 Proposal Processing System User Guide V1.0",
+      "issuer": "ISSDC",
+      "url": "https://alpps.issdc.gov.in/web/extensions/Aditya-l1/resources/docs/ALPPS_UserGuide_V1.0.pdf",
+      "access_outcome": "PUBLICLY_ACCESSIBLE_REVIEWED",
+      "supports": "POC/public-product context",
+      "limitations": "No GTI, time-field, quality-bit, response-conversion, or version-precedence contract."
+    },
+    {
+      "title": "PRADAN Other Downloads",
+      "issuer": "ISSDC",
+      "url": "https://pradan.issdc.gov.in/al1/protected/miscDownloads.xhtml",
+      "access_outcome": "ACCESS_RESTRICTED",
+      "supports": "Official route for instrument handbook/SIS/release material",
+      "limitations": "ISSDC authenticated session required; no access control was bypassed."
+    }
+  ],
+  "readiness_checks": [
+    {
+      "item": "Canonical source-document provenance",
+      "status": "PASS",
+      "evidence": "Registered manual paths and SHA-256 values in canonical document register.",
+      "rationale": "Only hash-matching local canonical documents may support adjudication."
+    },
+    {
+      "item": "Archive structural inventory",
+      "status": "PASS",
+      "evidence": "Phase 4E: 178 structurally readable FITS products, 0 inspection failures; extraction/filtering disabled.",
+      "rationale": "Structural readability is not scientific eligibility."
+    },
+    {
+      "item": "Valid observation timestamps and time reference",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS Unix-time claim is scoped; HEL1OS MJD/ISOT authority and disagreement handling remain partial.",
+      "rationale": "No combined observation-time policy is established."
+    },
+    {
+      "item": "Applicable GTI intervals and endpoint semantics",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS endpoint contract is missing; HEL1OS L1 GTI can be ignored only in the documented L1 scope.",
+      "rationale": "No GTI mask or endpoint convention may be applied."
+    },
+    {
+      "item": "Quality and saturation handling",
+      "status": "BLOCKED",
+      "evidence": "Candidate HEL1OS HK/status fields were structurally inventoried, but no L1 bit meaning, threshold, or rejection rule is documented.",
+      "rationale": "Missing metadata is not evidence of clean data."
+    },
+    {
+      "item": "Instrument/product/version precedence",
+      "status": "BLOCKED",
+      "evidence": "Fourteen HEL1OS V111/V211 counterpart groups have no authoritative supersession rule.",
+      "rationale": "Products remain separate; row counts and apparent recency are not precedence evidence."
+    },
+    {
+      "item": "Calibration eligibility and physical-flux conversion",
+      "status": "BLOCKED",
+      "evidence": "SoLEXS manual identifies ARF/RMF for spectral analysis but no applicable RATE-to-irradiance conversion; HEL1OS response policy remains incomplete.",
+      "rationale": "Count rate is not promoted to physical flux."
+    },
+    {
+      "item": "Observation coverage and gaps",
+      "status": "BLOCKED",
+      "evidence": "Inventory includes 6 SoLEXS and 44 HEL1OS light curves, but valid exposure rules are incomplete.",
+      "rationale": "File presence and raw rows do not establish usable coverage."
+    },
+    {
+      "item": "Verified flare-event labels and provenance",
+      "status": "BLOCKED",
+      "evidence": "Phase 3B records 123 reference events, but instrument interval overlap is not verified.",
+      "rationale": "Reference catalog provenance does not establish instrument-positive windows."
+    },
+    {
+      "item": "Completeness of negative labels",
+      "status": "BLOCKED",
+      "evidence": "Canonical summary explicitly records negative-label completeness as false.",
+      "rationale": "Unobserved or uncatalogued intervals are not negative examples."
+    },
+    {
+      "item": "Chronological split feasibility without leakage",
+      "status": "BLOCKED",
+      "evidence": "Canonical summary: no final split boundaries; verified joint windows = 0.",
+      "rationale": "No eligible observation/label population exists for a leakage assessment."
+    }
+  ],
+  "safety": {
+    "training_or_tuning_performed": false,
+    "evaluation_performed": false,
+    "production_checkpoint_activity": false,
+    "production_activation": false,
+    "gti_or_quality_filters_applied": false,
+    "version_counterparts_merged": false,
+    "negative_labels_promoted": false
+  }
+}

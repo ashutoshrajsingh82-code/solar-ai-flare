@@ -1,0 +1,312 @@
+{
+  "report_version": 1,
+  "model_id": "lstm_fusion_1792523111_2802f9e0",
+  "model_status": "demo_only",
+  "evaluation_timestamp_utc": "2026-10-20T19:05:16.965772+00:00",
+  "evaluation_split": "chronological_test",
+  "decision_thresholds": {
+    "1h": 0.5,
+    "3h": 0.5,
+    "6h": 0.5,
+    "12h": 0.5,
+    "24h": 0.5
+  },
+  "threshold_selection": {
+    "1h": {
+      "threshold": 0.5,
+      "method": "uncertain_fallback_0.5",
+      "reason": "uncertain: validation support is 0 positive and 2029 negative windows",
+      "validation_positive_windows": 0,
+      "validation_negative_windows": 2029,
+      "selection_period": {
+        "start_utc": "2026-08-08T00:00:00+00:00",
+        "end_utc": "2026-08-09T11:59:00+00:00"
+      }
+    },
+    "3h": {
+      "threshold": 0.5,
+      "method": "uncertain_fallback_0.5",
+      "reason": "uncertain: validation support is 0 positive and 1909 negative windows",
+      "validation_positive_windows": 0,
+      "validation_negative_windows": 1909,
+      "selection_period": {
+        "start_utc": "2026-08-08T00:00:00+00:00",
+        "end_utc": "2026-08-09T11:59:00+00:00"
+      }
+    },
+    "6h": {
+      "threshold": 0.5,
+      "method": "uncertain_fallback_0.5",
+      "reason": "uncertain: validation support is 0 positive and 1729 negative windows",
+      "validation_positive_windows": 0,
+      "validation_negative_windows": 1729,
+      "selection_period": {
+        "start_utc": "2026-08-08T00:00:00+00:00",
+        "end_utc": "2026-08-09T11:59:00+00:00"
+      }
+    },
+    "12h": {
+      "threshold": 0.5,
+      "method": "uncertain_fallback_0.5",
+      "reason": "uncertain: validation support is 0 positive and 1369 negative windows",
+      "validation_positive_windows": 0,
+      "validation_negative_windows": 1369,
+      "selection_period": {
+        "start_utc": "2026-08-08T00:00:00+00:00",
+        "end_utc": "2026-08-09T11:59:00+00:00"
+      }
+    },
+    "24h": {
+      "threshold": 0.5,
+      "method": "uncertain_fallback_0.5",
+      "reason": "uncertain: validation support is 0 positive and 649 negative windows",
+      "validation_positive_windows": 0,
+      "validation_negative_windows": 649,
+      "selection_period": {
+        "start_utc": "2026-08-08T00:00:00+00:00",
+        "end_utc": "2026-08-09T11:59:00+00:00"
+      }
+    }
+  },
+  "label_definition": "Existing pipeline forecast targets; five horizons (1h, 3h, 6h, 12h, 24h).",
+  "feature_schema": [
+    "solexs_flux_scaled",
+    "helios_flux_scaled"
+  ],
+  "data_provenance": {
+    "source": "demo",
+    "filename": "demo_aditya_l1_solexs_helios.csv",
+    "synthetic": true,
+    "event_metadata_verified": false,
+    "scientific_status": "synthetic_demo_smoke"
+  },
+  "periods": {
+    "train": {
+      "start": "2026-08-01T00:00:00+00:00",
+      "end": "2026-08-07T23:59:00+00:00",
+      "samples": 10080
+    },
+    "validation": {
+      "start": "2026-08-08T00:00:00+00:00",
+      "end": "2026-08-09T11:59:00+00:00",
+      "samples": 2160
+    },
+    "holdout": {
+      "start": "2026-08-09T12:00:00+00:00",
+      "end": "2026-08-10T23:59:00+00:00",
+      "samples": 2160
+    }
+  },
+  "metrics": {
+    "evaluation_split": "chronological_test",
+    "evaluation_samples": 2121,
+    "evaluation_note": "Synthetic/demo results are demonstrations, not observational validation.",
+    "nowcast_accuracy": 0.7958510136727959,
+    "nowcast_f1_macro": 0.41815593898496406,
+    "nowcast_confusion_matrix": [
+      [
+        1615,
+        167,
+        24,
+        168
+      ],
+      [
+        35,
+        2,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        9,
+        3
+      ],
+      [
+        13,
+        22,
+        0,
+        62
+      ]
+    ],
+    "forecast_per_horizon": {
+      "1h": {
+        "sample_count": 2100,
+        "positive_count": 0,
+        "negative_count": 2100,
+        "positive_prevalence": 0.0,
+        "threshold": 0.5,
+        "tp": 0,
+        "fp": 393,
+        "tn": 1707,
+        "fn": 0,
+        "false_alarms": 393,
+        "missed_positive_windows": 0,
+        "accuracy": 0.8128571428571428,
+        "precision": 0.0,
+        "recall": null,
+        "pod": null,
+        "f1": null,
+        "false_alarm_rate": 1.0,
+        "far": 1.0,
+        "tss": null,
+        "hss": 0.0,
+        "undefined_metric_reasons": {
+          "pod": "No positive cases in the evaluated sample.",
+          "tss": "TSS requires at least one positive and one negative case.",
+          "recall": "Recall requires at least one positive case.",
+          "f1": "F1 is undefined for this evaluation contract because there are no positive cases.",
+          "roc_auc": "ROC-AUC requires both positive and negative cases.",
+          "pr_auc": "PR-AUC is undefined when the holdout contains no positive cases."
+        },
+        "roc_auc": null,
+        "pr_auc": null,
+        "brier_score": 0.21672930168071483
+      },
+      "3h": {
+        "sample_count": 1980,
+        "positive_count": 0,
+        "negative_count": 1980,
+        "positive_prevalence": 0.0,
+        "threshold": 0.5,
+        "tp": 0,
+        "fp": 106,
+        "tn": 1874,
+        "fn": 0,
+        "false_alarms": 106,
+        "missed_positive_windows": 0,
+        "accuracy": 0.9464646464646465,
+        "precision": 0.0,
+        "recall": null,
+        "pod": null,
+        "f1": null,
+        "false_alarm_rate": 1.0,
+        "far": 1.0,
+        "tss": null,
+        "hss": 0.0,
+        "undefined_metric_reasons": {
+          "pod": "No positive cases in the evaluated sample.",
+          "tss": "TSS requires at least one positive and one negative case.",
+          "recall": "Recall requires at least one positive case.",
+          "f1": "F1 is undefined for this evaluation contract because there are no positive cases.",
+          "roc_auc": "ROC-AUC requires both positive and negative cases.",
+          "pr_auc": "PR-AUC is undefined when the holdout contains no positive cases."
+        },
+        "roc_auc": null,
+        "pr_auc": null,
+        "brier_score": 0.23294273224333575
+      },
+      "6h": {
+        "sample_count": 1800,
+        "positive_count": 0,
+        "negative_count": 1800,
+        "positive_prevalence": 0.0,
+        "threshold": 0.5,
+        "tp": 0,
+        "fp": 331,
+        "tn": 1469,
+        "fn": 0,
+        "false_alarms": 331,
+        "missed_positive_windows": 0,
+        "accuracy": 0.8161111111111111,
+        "precision": 0.0,
+        "recall": null,
+        "pod": null,
+        "f1": null,
+        "false_alarm_rate": 1.0,
+        "far": 1.0,
+        "tss": null,
+        "hss": 0.0,
+        "undefined_metric_reasons": {
+          "pod": "No positive cases in the evaluated sample.",
+          "tss": "TSS requires at least one positive and one negative case.",
+          "recall": "Recall requires at least one positive case.",
+          "f1": "F1 is undefined for this evaluation contract because there are no positive cases.",
+          "roc_auc": "ROC-AUC requires both positive and negative cases.",
+          "pr_auc": "PR-AUC is undefined when the holdout contains no positive cases."
+        },
+        "roc_auc": null,
+        "pr_auc": null,
+        "brier_score": 0.2337783393548891
+      },
+      "12h": {
+        "sample_count": 1440,
+        "positive_count": 0,
+        "negative_count": 1440,
+        "positive_prevalence": 0.0,
+        "threshold": 0.5,
+        "tp": 0,
+        "fp": 258,
+        "tn": 1182,
+        "fn": 0,
+        "false_alarms": 258,
+        "missed_positive_windows": 0,
+        "accuracy": 0.8208333333333333,
+        "precision": 0.0,
+        "recall": null,
+        "pod": null,
+        "f1": null,
+        "false_alarm_rate": 1.0,
+        "far": 1.0,
+        "tss": null,
+        "hss": 0.0,
+        "undefined_metric_reasons": {
+          "pod": "No positive cases in the evaluated sample.",
+          "tss": "TSS requires at least one positive and one negative case.",
+          "recall": "Recall requires at least one positive case.",
+          "f1": "F1 is undefined for this evaluation contract because there are no positive cases.",
+          "roc_auc": "ROC-AUC requires both positive and negative cases.",
+          "pr_auc": "PR-AUC is undefined when the holdout contains no positive cases."
+        },
+        "roc_auc": null,
+        "pr_auc": null,
+        "brier_score": 0.24049736077981548
+      },
+      "24h": {
+        "sample_count": 720,
+        "positive_count": 0,
+        "negative_count": 720,
+        "positive_prevalence": 0.0,
+        "threshold": 0.5,
+        "tp": 0,
+        "fp": 125,
+        "tn": 595,
+        "fn": 0,
+        "false_alarms": 125,
+        "missed_positive_windows": 0,
+        "accuracy": 0.8263888888888888,
+        "precision": 0.0,
+        "recall": null,
+        "pod": null,
+        "f1": null,
+        "false_alarm_rate": 1.0,
+        "far": 1.0,
+        "tss": null,
+        "hss": 0.0,
+        "undefined_metric_reasons": {
+          "pod": "No positive cases in the evaluated sample.",
+          "tss": "TSS requires at least one positive and one negative case.",
+          "recall": "Recall requires at least one positive case.",
+          "f1": "F1 is undefined for this evaluation contract because there are no positive cases.",
+          "roc_auc": "ROC-AUC requires both positive and negative cases.",
+          "pr_auc": "PR-AUC is undefined when the holdout contains no positive cases."
+        },
+        "roc_auc": null,
+        "pr_auc": null,
+        "brier_score": 0.2455066884682224
+      }
+    },
+    "tss_mean": null,
+    "hss_mean": 0.0,
+    "tss": null,
+    "hss": 0.0,
+    "precision": 0.0,
+    "recall": null,
+    "f1": null,
+    "false_alarm_rate": 1.0,
+    "pr_auc": null
+  },
+  "scientific_limitations": [
+    "Demo results are not observational validation."
+  ]
+}

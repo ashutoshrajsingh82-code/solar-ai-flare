@@ -1,0 +1,68 @@
+{
+  "generated_at_utc": "2026-10-26T16:09:58.579918+00:00",
+  "phase": "Phase 4U \u2014 Multi-Epoch Real-Data Expansion and Untouched Holdout Design",
+  "local_source_archives": [
+    {
+      "archive_id": "ARCHIVE_MAY2024",
+      "archive_name": "solexs_2026Oct25T200126271.zip",
+      "path": "C:\\Users\\ASHUTOSH\\Downloads\\solexs_2026Oct25T200126271.zip",
+      "size_bytes": 92592109,
+      "sha256": "8df85ed75b6f00052d7f45a6764b187c700977f931504fb79fdfe56f10df9db2",
+      "sha256_verified": true,
+      "epoch_name": "EPOCH_1_SOLAR_MAX_MAY2024",
+      "description": "Solar Cycle 25 Maximum / AR 13664 X-class eruptive period (May 8-15, 2024)",
+      "development_role": "Previously examined development data (Phase 4S / Phase 4T)",
+      "daily_packages_found": 8,
+      "eligible_lightcurves_extracted": 8
+    },
+    {
+      "archive_id": "ARCHIVE_FEB2026",
+      "archive_name": "solexs_2026Oct23T184402685.zip",
+      "path": "C:\\Users\\ASHUTOSH\\Downloads\\solexs_2026Oct23T184402685.zip",
+      "size_bytes": 29334261,
+      "sha256": "34c39624194ee2da95bbf8e3dfed5ac002c55a517a31bc4091bfdd0d2b4671c2",
+      "sha256_verified": true,
+      "epoch_name": "EPOCH_2_QUIET_SUN_FEB2026",
+      "description": "Aditya-L1 mission phase, quiet-sun to moderate flaring (Jan 31 - Feb 5, 2026)",
+      "development_role": "Previously examined development data (Phase 4M-S through Phase 4R)",
+      "daily_packages_found": 6,
+      "eligible_lightcurves_extracted": 6
+    }
+  ],
+  "overall_summary": {
+    "unique_source_archives": 2,
+    "total_eligible_lightcurves": 14,
+    "total_observation_dates": [
+      "20240508",
+      "20240509",
+      "20240510",
+      "20240511",
+      "20240512",
+      "20240513",
+      "20240514",
+      "20240515",
+      "20260131",
+      "20260201",
+      "20260202",
+      "20260203",
+      "20260204",
+      "20260205"
+    ],
+    "total_bins_recorded": 1209600,
+    "total_finite_records": 963395,
+    "total_nan_bins": 246205,
+    "overall_duty_cycle_pct": 79.6458,
+    "all_products_previously_examined": true,
+    "untouched_third_epoch_locally_available": false
+  },
+  "holdout_epoch_reservation": {
+    "epoch_id": "EPOCH_3_RESERVED_UNTOUCHED_HOLDOUT",
+    "period_id": "P-2024Q4-OCT",
+    "date_range": "2024-10-01 to 2024-10-07",
+    "target_days": 7,
+    "scientific_rationale": "Captures post-PV solar maximum conditions, specifically AR 13842 major eruptive sequence including the historic X9.0 flare on 2024-10-03. Features Software Version 1.1 / Data Version 1.0 released by ISRO on 2025-02-14. Distinct instrument epoch from May 2024 and Jan-Feb 2026.",
+    "acquisition_status": "ACQUISITION_PENDING_OPERATOR_PRADAN_LOGIN",
+    "local_availability": false,
+    "access_restrictions": "STRICTLY_RESERVED_UNTOUCHED_HOLDOUT: Zero inspection, tuning, or evaluation permitted during model development."
+  }
+}

@@ -28,4 +28,5 @@ def test_init_db_adds_job_metadata_columns_without_dropping_records(tmp_path, mo
     assert indexes["uq_background_job_type_idempotency_key"] == ["job_type", "idempotency_key"]
     with engine.connect() as connection:
         assert connection.execute(text("SELECT status FROM background_jobs WHERE job_id='legacy-job'")).scalar_one() == "done"
+        assert set(connection.execute(text("SELECT version FROM schema_migrations")).scalars()) == {1, 2, 3, 4}
     engine.dispose()

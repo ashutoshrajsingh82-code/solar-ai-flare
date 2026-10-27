@@ -1,0 +1,7 @@
+blocker_id,affected_rule_ids,status,required_response_or_artifact,official_contact_or_access_route
+B-SLX-GTI-001,R03,REQUEST_PREPARED,Versioned SoLEXS L1 FITS SIS/data dictionary with interval semantics,ISSDC/PRADAN Other Downloads or official SoLEXS data-product contact
+B-SLX-PROV-002,R05,REQUEST_PREPARED,L1 provenance/schema and product-version compatibility specification,ISSDC/PRADAN Other Downloads or official SoLEXS data-product contact
+B-SLX-CAL-003,R06,REQUEST_PREPARED,CALDB applicability/version matrix plus RATE-to-flux conversion and uncertainty documentation,ISSDC/PRADAN Other Downloads or official SoLEXS calibration contact
+B-HL-TIME-004,R07|R08,REQUEST_PREPARED,HEL1OS L1 SIS/time-correlation specification and discrepancy policy,ISSDC/PRADAN Other Downloads or official HEL1OS data-product contact
+B-HL-QUALITY-005,R14,REQUEST_PREPARED,Versioned HEL1OS L1 HK/quality SIS with bits thresholds and authorized actions,ISSDC/PRADAN Other Downloads or official HEL1OS instrument/data-quality contact
+B-HL-VERSION-006,R13,REQUEST_PREPARED,Official V111/V211 release manifest or supersession notice,ISSDC/PRADAN Other Downloads or official HEL1OS release-management contact
